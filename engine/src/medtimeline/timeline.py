@@ -17,6 +17,9 @@ from medtimeline import normalize
 from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Medication, Vital
 
 REVIEW_THRESHOLD = 0.7
+# Two mentions of the same symptom or condition further apart than this count
+# as separate episodes.
+EPISODE_GAP_DAYS = 30
 
 
 class EncounterNode(BaseModel):
@@ -45,11 +48,26 @@ class MedicationCourse(BaseModel):
     entries: list[Medication]
 
 
+class Episode(BaseModel):
+    start: Optional[str]
+    end: Optional[str]
+    encounter_ids: list[str]
+
+
 class Condition(BaseModel):
     name: str
     first_seen: Optional[str]
     last_seen: Optional[str]
     encounter_ids: list[str]
+    episodes: list[Episode] = Field(default_factory=list)
+
+
+class Symptom(BaseModel):
+    name: str
+    first_seen: Optional[str]
+    last_seen: Optional[str]
+    encounter_ids: list[str]
+    episodes: list[Episode] = Field(default_factory=list)
 
 
 class LabPoint(BaseModel):
@@ -70,6 +88,7 @@ class PatientHistory(BaseModel):
     encounters: list[EncounterNode]
     medication_courses: list[MedicationCourse]
     conditions: list[Condition]
+    symptoms: list[Symptom] = Field(default_factory=list)
     lab_series: list[LabSeries]
     pages_needing_review: list[str]
 
@@ -150,6 +169,7 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
         encounters=encounters,
         medication_courses=_medication_courses(encounters),
         conditions=_conditions(encounters),
+        symptoms=_symptoms(encounters),
         lab_series=_lab_series(encounters),
         pages_needing_review=review_pages,
     )
@@ -183,17 +203,59 @@ def _medication_courses(encounters: list[EncounterNode]) -> list[MedicationCours
     return sorted(courses, key=lambda c: (c.start is None, c.start or "", c.drug))
 
 
-def _conditions(encounters: list[EncounterNode]) -> list[Condition]:
-    seen: dict[str, Condition] = {}
+def _key(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def episodes_from(dated: list[tuple[Optional[str], str]], gap_days: int = EPISODE_GAP_DAYS) -> list[Episode]:
+    """Split (date, encounter_id) mentions into episodes; undated ones form their own."""
+    episodes: list[Episode] = []
+    last: Optional[date] = None
+    for d, enc_id in sorted((x for x in dated if x[0]), key=lambda x: x[0]):
+        current = date.fromisoformat(d)
+        if last is None or (current - last).days > gap_days:
+            episodes.append(Episode(start=d, end=d, encounter_ids=[enc_id]))
+        else:
+            episodes[-1].end = d
+            episodes[-1].encounter_ids.append(enc_id)
+        last = current
+    undated = [enc_id for d, enc_id in dated if not d]
+    if undated:
+        episodes.append(Episode(start=None, end=None, encounter_ids=undated))
+    return episodes
+
+
+def _mentions(encounters: list[EncounterNode], texts_of) -> dict[str, tuple[str, list[tuple[Optional[str], str]]]]:
+    seen: dict[str, tuple[str, list[tuple[Optional[str], str]]]] = {}
     for enc in encounters:
-        for dx in enc.diagnoses:
-            key = " ".join(dx.text.lower().split())
-            c = seen.setdefault(key, Condition(name=dx.text, first_seen=enc.date, last_seen=enc.date, encounter_ids=[]))
-            c.encounter_ids.append(enc.id)
-            if enc.date:
-                c.first_seen = c.first_seen or enc.date
-                c.last_seen = enc.date
-    return list(seen.values())
+        for text in dict.fromkeys(texts_of(enc)):  # once per encounter
+            key = _key(text)
+            if key:
+                seen.setdefault(key, (text, []))[1].append((enc.date, enc.id))
+    return seen
+
+
+def _span(mentions: list[tuple[Optional[str], str]]) -> tuple[Optional[str], Optional[str]]:
+    dates = sorted(d for d, _ in mentions if d)
+    return (dates[0], dates[-1]) if dates else (None, None)
+
+
+def _conditions(encounters: list[EncounterNode]) -> list[Condition]:
+    out = []
+    for name, mentions in _mentions(encounters, lambda e: [d.text for d in e.diagnoses]).values():
+        first, last = _span(mentions)
+        out.append(Condition(name=name, first_seen=first, last_seen=last,
+                             encounter_ids=[i for _, i in mentions], episodes=episodes_from(mentions)))
+    return out
+
+
+def _symptoms(encounters: list[EncounterNode]) -> list[Symptom]:
+    out = []
+    for name, mentions in _mentions(encounters, lambda e: e.complaints).values():
+        first, last = _span(mentions)
+        out.append(Symptom(name=name, first_seen=first, last_seen=last,
+                           encounter_ids=[i for _, i in mentions], episodes=episodes_from(mentions)))
+    return out
 
 
 def _lab_series(encounters: list[EncounterNode]) -> list[LabSeries]:

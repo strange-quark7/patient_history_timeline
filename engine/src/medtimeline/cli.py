@@ -14,7 +14,8 @@ from pathlib import Path
 from medtimeline.extract import ExtractionError, available_extractors, get_extractor
 from medtimeline.ingest import load_folder
 from medtimeline.schema import ExtractionRecord
-from medtimeline.timeline import build_history
+from medtimeline.timeline import PatientHistory, build_history
+from medtimeline.views import Lens, SortBy, build_view
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -80,6 +81,19 @@ def cmd_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_view(args: argparse.Namespace) -> int:
+    history = PatientHistory.model_validate_json(Path(args.history).read_text())
+    view = build_view(history, args.lens, args.sort, args.query, args.start, args.end)
+    if args.json:
+        print(view.model_dump_json(indent=2))
+        return 0
+    print(f"{'':<2}{'item':<34}{'first':<12}{'last':<12}{'visits':>7}{'episodes':>9}  related")
+    for r in view.rows:
+        print(f"{r.kind[0].upper():<2}{r.label[:33]:<34}{r.first_seen or '-':<12}{r.last_seen or '-':<12}"
+              f"{r.visit_count:>7}{r.episode_count:>9}  {', '.join(r.related)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="medtimeline")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -100,6 +114,16 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--model")
     v.add_argument("--fixtures")
     v.set_defaults(func=cmd_eval)
+
+    w = sub.add_parser("view", help="Show a history through one lens, sorted")
+    w.add_argument("history", help="JSON written by `build`")
+    w.add_argument("--lens", default="visits", choices=[x.value for x in Lens])
+    w.add_argument("--sort", default="chronological", choices=[x.value for x in SortBy])
+    w.add_argument("--query", help="Only rows whose name (or related items) contain this text")
+    w.add_argument("--from", dest="start", help="YYYY-MM-DD")
+    w.add_argument("--to", dest="end", help="YYYY-MM-DD")
+    w.add_argument("--json", action="store_true", help="Print the full view as JSON")
+    w.set_defaults(func=cmd_view)
 
     e = sub.add_parser("extractors", help="List available extractors")
     e.set_defaults(func=lambda a: print("\n".join(available_extractors())) or 0)

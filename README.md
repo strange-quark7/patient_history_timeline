@@ -17,7 +17,8 @@ engine/   Python engine: ingest -> extract -> normalize -> assemble history
     schema.py        the structured record every extractor returns
     extract/         swappable extractors (claude = cloud; fixture = offline stand-in)
     normalize.py     DD/MM dates, 1-0-1 / BD frequencies, durations, drug keys
-    timeline.py      encounters, medication courses, conditions, lab series
+    timeline.py      encounters, medication courses, conditions, symptoms, episodes, lab series
+    views.py         lenses (visits, symptoms, medications, both, conditions, labs) and sort orders
     evaluate.py      field-level scoring against hand-labelled gold pages
 app/      desktop app (Tauri + React), not started
 docs/     plan and design notes
@@ -35,6 +36,20 @@ medtimeline build path/to/patient-docs --out patient.history.json --cache cache/
 ```
 
 `--cache` stores each page's extraction so re-runs don't pay for extraction again.
+
+## Sorting and slicing the timeline
+
+```bash
+medtimeline view patient.history.json --lens symptoms_medications --sort episodes
+```
+
+Lenses: `visits`, `symptoms`, `medications`, `symptoms_medications`, `conditions`, `labs`.
+Sorts: `chronological`, `recent`, `episodes`, `visits`, `duration`, `name`.
+Filters: `--query <text>`, `--from YYYY-MM-DD`, `--to YYYY-MM-DD`.
+
+An episode is a run of mentions of the same symptom, condition or drug with no
+gap longer than 30 days (`EPISODE_GAP_DAYS`). In `symptoms_medications`, each row
+lists the items of the other kind seen at the same visits.
 
 ## Scoring an extractor
 
