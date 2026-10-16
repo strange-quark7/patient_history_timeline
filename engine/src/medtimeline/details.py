@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date, timedelta
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -15,6 +16,7 @@ class ActiveMedication(BaseModel):
     drug: str
     dose: Medication = Field(description="The prescription in force at that date.")
     course_start: Optional[str]
+    prescribed_on: Optional[str] = Field(None, description="Visit date of the prescription in force.")
 
 
 class EpisodeDetail(BaseModel):
@@ -49,18 +51,13 @@ def medications_on(history: PatientHistory, day: Optional[str]) -> list[ActiveMe
     """Drugs prescribed on or before `day` whose course had not ended by then."""
     if not day:
         return []
-    dates = {e.id: e.date for e in history.encounters}
     active = []
     for course in history.medication_courses:
         course: MedicationCourse
-        if not course.start or course.start > day or (course.end and course.end < day):
-            continue
-        current = None
-        for enc_id, entry in zip(course.encounter_ids, course.entries):
-            if dates[enc_id] and dates[enc_id] <= day:
-                current = entry
-        if current:
-            active.append(ActiveMedication(drug=course.drug, dose=current, course_start=course.start))
+        period = next((p for p in reversed(course.periods) if p.start <= day <= p.end), None)
+        if period:
+            active.append(ActiveMedication(drug=course.drug, dose=period.entry, course_start=course.start,
+                                           prescribed_on=period.start))
     return active
 
 
@@ -75,10 +72,12 @@ def episode_detail(history: PatientHistory, episode_id: str) -> EpisodeDetail:
     ep = next(e for e in history.episodes if e.id == episode_id)
     visit = _encounter(history, ep.reported_at)
     # Medication the patient was on when it happened, not what the visit then changed.
-    meds = medications_on(history, ep.date or visit.date)
-    if not ep.date:
-        # Undated: assume it happened before the visit, so drop drugs that visit started.
-        meds = [m for m in meds if m.course_start != visit.date]
+    # It happened before the visit that recorded it, so drugs that visit prescribed are not counted:
+    # undated or same-day events use the day before the visit.
+    day = ep.date
+    if visit.date and (not day or day >= visit.date):
+        day = (date.fromisoformat(visit.date) - timedelta(days=1)).isoformat()
+    meds = medications_on(history, day)
     labs, imaging, other = _split_tests(visit.investigations)
     return EpisodeDetail(
         episode=ep,

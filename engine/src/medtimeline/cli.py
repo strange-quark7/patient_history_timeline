@@ -11,11 +11,10 @@ import json
 import sys
 from pathlib import Path
 
-from medtimeline.extract import ExtractionError, available_extractors, get_extractor
+from medtimeline.extract import available_extractors, get_extractor
 from medtimeline.ingest import load_folder
-from medtimeline.schema import ExtractionRecord
+from medtimeline.pipeline import extract_folder
 from medtimeline.timeline import PatientHistory, build_history
-from medtimeline.verify import verify_page
 from medtimeline.views import Lens, SortBy, build_view
 
 
@@ -27,38 +26,16 @@ def cmd_build(args: argparse.Namespace) -> int:
         kwargs["model"] = args.model
     extractor = get_extractor(args.extractor, **kwargs)
 
-    pages = load_folder(args.folder)
-    if not pages:
+    if not load_folder(args.folder):
         print(f"No supported files in {args.folder}", file=sys.stderr)
         return 1
 
-    records, failures = [], []
+    def progress(p: dict) -> None:
+        if p["file"]:
+            print(f"Extracting {p['file']} page {p['page']}...", file=sys.stderr)
+
     cache_dir = Path(args.cache) if args.cache else None
-    for page in pages:
-        cached = cache_dir / f"{page.page_id}.json" if cache_dir else None
-        if cached and cached.exists():
-            records.append(ExtractionRecord.model_validate_json(cached.read_text()))
-            continue
-        print(f"Extracting {Path(page.source_file).name} page {page.page_number}...", file=sys.stderr)
-        try:
-            extraction = extractor.extract(page)
-        except ExtractionError as e:
-            failures.append(str(e))
-            continue
-        issues, grounding = verify_page(extraction, page.text_layer)
-        rec = ExtractionRecord(
-            page_id=page.page_id,
-            source_file=page.source_file,
-            page_number=page.page_number,
-            extractor=extractor.name,
-            extraction=extraction,
-            issues=[i.model_dump() for i in issues],
-            grounding=grounding,
-        )
-        records.append(rec)
-        if cached:
-            cached.parent.mkdir(parents=True, exist_ok=True)
-            cached.write_text(rec.model_dump_json(indent=2))
+    records, failures = extract_folder(args.folder, extractor, cache_dir, progress)
 
     history = build_history(records)
     Path(args.out).write_text(history.model_dump_json(indent=2))
@@ -129,6 +106,11 @@ def main(argv: list[str] | None = None) -> int:
     w.add_argument("--to", dest="end", help="YYYY-MM-DD")
     w.add_argument("--json", action="store_true", help="Print the full view as JSON")
     w.set_defaults(func=cmd_view)
+
+    s = sub.add_parser("serve", help="Run the JSON-lines service the desktop app talks to")
+    s.add_argument("--http", type=int, metavar="PORT", help="Serve over HTTP on localhost instead (for browser development)")
+    s.add_argument("--home", help="Folder for patient projects (default: $MEDTIMELINE_HOME or ~/.medtimeline)")
+    s.set_defaults(func=lambda a: __import__("medtimeline.serve", fromlist=["main"]).main(a.http, a.home))
 
     e = sub.add_parser("extractors", help="List available extractors")
     e.set_defaults(func=lambda a: print("\n".join(available_extractors())) or 0)

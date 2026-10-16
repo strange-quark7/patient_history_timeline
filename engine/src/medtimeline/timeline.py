@@ -42,6 +42,15 @@ class EncounterNode(BaseModel):
     needs_review: int = 0
 
 
+class MedicationPeriod(BaseModel):
+    """When one prescription was in force."""
+
+    start: str
+    end: str
+    encounter_id: str
+    entry: Medication
+
+
 class MedicationCourse(BaseModel):
     drug: str
     start: Optional[str]
@@ -50,6 +59,7 @@ class MedicationCourse(BaseModel):
     entries: list[Medication]
     condition: Optional[str] = Field(None, description="The condition it treats, only if the page or the drug table settles it.")
     condition_basis: Optional[str] = Field(None, description="'page' (written on the page) or 'drug_table' (only one of the patient's conditions fits).")
+    periods: list[MedicationPeriod] = Field(default_factory=list, description="When it was in force; gaps mean it was not.")
 
 
 class Episode(BaseModel):
@@ -263,6 +273,39 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
     )
 
 
+SHORT_COURSE_DAYS = 14
+AS_NEEDED = {"SOS", "PRN", "STAT", "AS NEEDED", "WHEN REQUIRED"}
+
+
+def _periods(items: list[tuple["EncounterNode", Medication]]) -> list[MedicationPeriod]:
+    """When each prescription was in force.
+
+    A short written course (14 days or less) ends when the course does. An as-needed
+    or one-off order counts only on its visit day. Anything else is taken to run until
+    the drug is next written, and the last one until its written duration ends (or that day).
+    """
+    dated = sorted(((e, m) for e, m in items if e.date), key=lambda x: x[0].date)
+    out: list[MedicationPeriod] = []
+    for i, (enc, m) in enumerate(dated):
+        start = date.fromisoformat(enc.date)
+        days = normalize.duration_days(m.duration)
+        as_needed = (m.frequency or "").strip().upper() in AS_NEEDED
+        nxt = date.fromisoformat(dated[i + 1][0].date) if i + 1 < len(dated) else None
+        if as_needed:
+            end = start
+        elif days and days <= SHORT_COURSE_DAYS:
+            end = start + timedelta(days=days)
+        elif nxt:
+            end = max(nxt, start + timedelta(days=days or 0))
+        else:
+            end = start + timedelta(days=days or 0)
+        if out and out[-1].end >= start.isoformat() and out[-1].entry == m:
+            out[-1].end = max(out[-1].end, end.isoformat())  # same prescription repeated: one period
+        else:
+            out.append(MedicationPeriod(start=start.isoformat(), end=end.isoformat(), encounter_id=enc.id, entry=m))
+    return out
+
+
 def _linked_condition(enc: EncounterNode, item: str, conditions: list[str]) -> Optional[str]:
     """The condition a link on this visit's pages ties `item` to, if any."""
     for link in enc.links:
@@ -299,6 +342,9 @@ def _medication_courses(encounters: list[EncounterNode], conditions: list[str] =
             )
         )
         course = courses[-1]
+        course.periods = _periods(items)
+        if course.periods:
+            course.end = course.periods[-1].end
         on_page = next((c for e, m in items if (c := _linked_condition(e, m.drug_as_written, list(conditions)))), None)
         if on_page:
             course.condition, course.condition_basis = on_page, "page"

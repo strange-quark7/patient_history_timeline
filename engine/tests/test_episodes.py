@@ -106,9 +106,9 @@ def test_correlation_windows(history):
 
     changes = correlate(history)
     assert [(c.date, c.drug, c.kind) for c in changes] == [
-        ("2024-03-14", "levetiracetam", "started"),
+        ("2024-03-14", "levetiracetam", "first recorded"),
         ("2024-07-02", "levetiracetam", "dose change"),
-        ("2024-12-23", "clobazam", "started"),
+        ("2024-12-23", "clobazam", "first recorded"),
         ("2025-04-10", "levetiracetam", "dose change"),
     ]
     start, raise_750, clobazam, raise_1000 = changes
@@ -125,7 +125,7 @@ def test_visit_flags_mark_what_was_new(history):
 
     first = {(f.kind, f.text) for f in visit_flags(history, history.encounters[0].id)}
     assert ("new_symptom", "seizures") in first
-    assert ("medication_change", "levetiracetam started, 500 mg BD") in first
+    assert ("medication_change", "levetiracetam first recorded, 500 mg BD") in first
     assert ("new_diagnosis", "Focal epilepsy") in first
     assert ("known_comorbidity", "Hypothyroidism") in first
     third = {(f.kind, f.text) for f in visit_flags(history, history.encounters[2].id)}

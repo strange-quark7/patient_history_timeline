@@ -32,7 +32,7 @@ class Window(BaseModel):
 class MedicationChange(BaseModel):
     date: str
     drug: str
-    kind: str  # "started" or "dose change"
+    kind: str  # "first recorded" (the records cannot tell a new start from an old drug) or "dose change"
     dose: Optional[str]
     previous_dose: Optional[str]
     encounter_id: str
@@ -54,7 +54,7 @@ def medication_changes(history: PatientHistory, condition: Optional[str] = None)
                 continue
             dose = " ".join(x for x in [entry.strength, entry.frequency] if x) or None
             if previous is None:
-                out.append((day, course.drug, "started", dose, None, enc_id))
+                out.append((day, course.drug, "first recorded", dose, None, enc_id))
             elif dose and dose != previous:
                 out.append((day, course.drug, "dose change", dose, previous, enc_id))
             previous = dose or previous
