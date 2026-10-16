@@ -57,12 +57,20 @@ impl EngineProcess {
             .split_first()
             .ok_or_else(|| "empty engine command".to_string())?;
         // The parent environment (including ANTHROPIC_API_KEY) is inherited by default.
-        let mut child = Command::new(program)
-            .args(args)
+        let mut cmd = Command::new(program);
+        cmd.args(args)
             .arg("serve")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        #[cfg(windows)]
+        {
+            // Keep the engine from opening a console window next to the app.
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let mut child = cmd
             .spawn()
             .map_err(|e| {
                 format!(
