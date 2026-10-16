@@ -18,6 +18,7 @@ engine/   Python engine: ingest -> extract -> normalize -> assemble history
     extract/         swappable extractors (claude = cloud; fixture = offline stand-in)
     normalize.py     DD/MM dates, 1-0-1 / BD frequencies, durations, drug keys
     timeline.py      encounters, medication courses, conditions, symptoms, episodes, lab series
+    correlation.py   medication starts/dose changes vs episodes before and after
     details.py       what the detail panel shows for one selected episode or visit
     views.py         lenses (visits, symptoms, medications, both, conditions, labs) and sort orders
     evaluate.py      field-level scoring against hand-labelled gold pages
@@ -70,6 +71,12 @@ medtimeline eval eval/docs eval/gold --extractor claude
 that recorded it, the negative history, the medication in force when it happened,
 and the labs, imaging and other tests from that visit. `details.visit_detail`
 does the same for a visit.
+
+## Correlation
+
+`correlation.correlate(history)` lists every medication start and dose change,
+with episodes per month (and worst episodes) in the window since the previous
+change and until the next one. It shows timing only, not cause.
 
 A local extractor replaces the cloud one only once its scores are close enough.
 

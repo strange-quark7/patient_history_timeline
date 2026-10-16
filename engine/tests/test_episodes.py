@@ -98,3 +98,22 @@ def test_symptom_without_reports_falls_back_to_visits(sample_folder):
     ])
     pain = next(s for s in h.symptoms if s.name == "epigastric pain")
     assert len(pain.episodes) == 2 and all(e.id is None for e in pain.episodes)
+
+
+def test_correlation_windows(history):
+    from medtimeline.correlation import correlate
+
+    changes = correlate(history)
+    assert [(c.date, c.drug, c.kind) for c in changes] == [
+        ("2024-03-14", "levetiracetam", "started"),
+        ("2024-07-02", "levetiracetam", "dose change"),
+        ("2024-12-23", "clobazam", "started"),
+        ("2025-04-10", "levetiracetam", "dose change"),
+    ]
+    start, raise_750, clobazam, raise_1000 = changes
+    assert start.before.episodes == 2 and start.after.episodes == 3
+    # The worst seizure (22 Dec) falls just before clobazam was added.
+    assert raise_750.after.episodes == 4 and raise_750.after.worst_episodes == 1
+    assert clobazam.after.episodes == 4 and clobazam.after.worst_episodes == 0
+    assert raise_1000.after is None  # nothing recorded after the last visit yet
+    assert raise_750.previous_dose == "500 mg BD" and raise_750.dose == "750 mg BD"
