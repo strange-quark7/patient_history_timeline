@@ -17,19 +17,19 @@ def history(sample_folder):
     ])
 
 
-def test_episodes_split_on_gap():
-    eps = episodes_from([("2024-01-01", "a"), ("2024-01-20", "b"), ("2024-06-01", "c"), (None, "d")])
-    assert [(e.start, e.end, e.encounter_ids) for e in eps] == [
-        ("2024-01-01", "2024-01-20", ["a", "b"]),
-        ("2024-06-01", "2024-06-01", ["c"]),
-        (None, None, ["d"]),
+def test_each_visit_is_an_episode():
+    eps = episodes_from([("2024-01-20", "b"), (None, "d"), ("2024-01-01", "a"), ("2024-01-20", "b")])
+    assert [(e.start, e.encounter_ids) for e in eps] == [
+        ("2024-01-01", ["a"]),
+        ("2024-01-20", ["b"]),
+        (None, ["d"]),
     ]
 
 
 def test_symptoms_sorted_by_episodes(history):
     rows = build_view(history, "symptoms", "episodes").rows
     assert [(r.label, r.episode_count, r.visit_count) for r in rows] == [
-        ("epigastric pain", 2, 2),  # Jan and Mar visits are > 30 days apart
+        ("epigastric pain", 2, 2),  # seen at two visits
         ("constipation", 1, 1),
         ("fatigue", 1, 1),
     ]

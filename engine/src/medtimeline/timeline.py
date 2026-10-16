@@ -17,9 +17,6 @@ from medtimeline import normalize
 from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Medication, Vital
 
 REVIEW_THRESHOLD = 0.7
-# Two mentions of the same symptom or condition further apart than this count
-# as separate episodes.
-EPISODE_GAP_DAYS = 30
 
 
 class EncounterNode(BaseModel):
@@ -207,22 +204,10 @@ def _key(text: str) -> str:
     return " ".join(text.lower().split())
 
 
-def episodes_from(dated: list[tuple[Optional[str], str]], gap_days: int = EPISODE_GAP_DAYS) -> list[Episode]:
-    """Split (date, encounter_id) mentions into episodes; undated ones form their own."""
-    episodes: list[Episode] = []
-    last: Optional[date] = None
-    for d, enc_id in sorted((x for x in dated if x[0]), key=lambda x: x[0]):
-        current = date.fromisoformat(d)
-        if last is None or (current - last).days > gap_days:
-            episodes.append(Episode(start=d, end=d, encounter_ids=[enc_id]))
-        else:
-            episodes[-1].end = d
-            episodes[-1].encounter_ids.append(enc_id)
-        last = current
-    undated = [enc_id for d, enc_id in dated if not d]
-    if undated:
-        episodes.append(Episode(start=None, end=None, encounter_ids=undated))
-    return episodes
+def episodes_from(mentions: list[tuple[Optional[str], str]]) -> list[Episode]:
+    """One episode per doctor visit, in date order (undated visits last)."""
+    ordered = sorted(mentions, key=lambda x: (x[0] is None, x[0] or ""))
+    return [Episode(start=d, end=d, encounter_ids=[enc_id]) for d, enc_id in dict.fromkeys(ordered)]
 
 
 def _mentions(encounters: list[EncounterNode], texts_of) -> dict[str, tuple[str, list[tuple[Optional[str], str]]]]:

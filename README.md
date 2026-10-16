@@ -47,8 +47,8 @@ Lenses: `visits`, `symptoms`, `medications`, `symptoms_medications`, `conditions
 Sorts: `chronological`, `recent`, `episodes`, `visits`, `duration`, `name`.
 Filters: `--query <text>`, `--from YYYY-MM-DD`, `--to YYYY-MM-DD`.
 
-An episode is a run of mentions of the same symptom, condition or drug with no
-gap longer than 30 days (`EPISODE_GAP_DAYS`). In `symptoms_medications`, each row
+Each doctor visit where a symptom, condition or drug appears counts as one
+episode of it. In `symptoms_medications`, each row
 lists the items of the other kind seen at the same visits.
 
 ## Scoring an extractor
