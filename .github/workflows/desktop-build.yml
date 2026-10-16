@@ -12,7 +12,7 @@ jobs:
           - os: macos-latest   # Apple silicon
             name: mac-apple-silicon
             bundles: dmg
-          - os: macos-13       # Intel Macs
+          - os: macos-15-intel # Intel Macs
             name: mac-intel
             bundles: dmg
           - os: windows-latest
