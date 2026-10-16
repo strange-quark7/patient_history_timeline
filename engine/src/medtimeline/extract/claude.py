@@ -18,6 +18,8 @@ SYSTEM_PROMPT = """You read scanned medical documents (prescriptions, case sheet
 discharge summaries), many of them handwritten, and transcribe their contents into a structured record.
 
 Rules:
+- First write a verbatim transcription of the whole page, line by line, exactly as written.
+- Every item's source_text must be copied character for character from the page.
 - Transcribe only what is on the page. Never infer a diagnosis, drug or value that is not written.
 - Keep abbreviations as written in source_text (e.g. "T. Pan 40 1-0-0 x 5d"), and expand them in the structured fields when the meaning is clear.
 - Dates are DD/MM/YYYY unless the page clearly shows otherwise. Set date_ambiguous when day and month could be swapped or the year is missing.

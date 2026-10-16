@@ -15,6 +15,7 @@ from medtimeline.extract import ExtractionError, available_extractors, get_extra
 from medtimeline.ingest import load_folder
 from medtimeline.schema import ExtractionRecord
 from medtimeline.timeline import PatientHistory, build_history
+from medtimeline.verify import verify_page
 from medtimeline.views import Lens, SortBy, build_view
 
 
@@ -44,12 +45,15 @@ def cmd_build(args: argparse.Namespace) -> int:
         except ExtractionError as e:
             failures.append(str(e))
             continue
+        issues, grounding = verify_page(extraction, page.text_layer)
         rec = ExtractionRecord(
             page_id=page.page_id,
             source_file=page.source_file,
             page_number=page.page_number,
             extractor=extractor.name,
             extraction=extraction,
+            issues=[i.model_dump() for i in issues],
+            grounding=grounding,
         )
         records.append(rec)
         if cached:
@@ -60,7 +64,8 @@ def cmd_build(args: argparse.Namespace) -> int:
     Path(args.out).write_text(history.model_dump_json(indent=2))
     print(
         f"{len(records)} pages -> {len(history.encounters)} encounters, "
-        f"{len(history.pages_needing_review)} pages need review, {len(failures)} failed. Wrote {args.out}",
+        f"{len(history.pages_needing_review)} pages need review, {len(history.review_items)} items held back "
+        f"as unverified, {len(failures)} failed. Wrote {args.out}",
         file=sys.stderr,
     )
     for f in failures:

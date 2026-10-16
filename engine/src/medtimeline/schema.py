@@ -101,6 +101,10 @@ class ReportedEpisode(Sourced):
 
 
 class PageExtraction(BaseModel):
+    transcription: Optional[str] = Field(
+        None,
+        description="Verbatim transcription of the whole page, line by line, as written; no corrections or expansions.",
+    )
     doc_type: DocType
     script: Script
     encounter: Encounter
@@ -137,3 +141,5 @@ class ExtractionRecord(BaseModel):
     page_number: int
     extractor: str
     extraction: PageExtraction
+    issues: list = Field(default_factory=list, description="verify.Issue entries from the deterministic checks.")
+    grounding: str = Field("unchecked", description="What quotes were checked against: text_layer, transcription, none or unchecked.")

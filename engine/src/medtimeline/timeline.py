@@ -108,6 +108,17 @@ class LabSeries(BaseModel):
     points: list[LabPoint]
 
 
+class ReviewItem(BaseModel):
+    """An extracted item held out of the history because a check failed."""
+
+    page_id: str
+    section: str
+    field: str
+    reason: str
+    source_text: Optional[str]
+    blocking: bool
+
+
 class PatientHistory(BaseModel):
     patient_name: Optional[str]
     patient_conflicts: list[str] = Field(default_factory=list)
@@ -118,6 +129,7 @@ class PatientHistory(BaseModel):
     episodes: list[EpisodeRecord] = Field(default_factory=list)
     lab_series: list[LabSeries]
     pages_needing_review: list[str]
+    review_items: list[ReviewItem] = Field(default_factory=list)
 
 
 def _encounter_key(rec: ExtractionRecord) -> tuple:
@@ -134,6 +146,22 @@ def _review_count(items) -> int:
 
 
 def build_history(records: list[ExtractionRecord]) -> PatientHistory:
+    """Assemble verified items into a history; failed items go to review_items instead."""
+    from medtimeline.verify import Issue, gate
+
+    review: list[ReviewItem] = []
+    gated = []
+    for rec in records:
+        issues = [Issue.model_validate(i) for i in rec.issues]
+        for issue in issues:
+            items = getattr(rec.extraction, issue.section, None)
+            item = items[issue.index] if isinstance(items, list) and issue.index is not None else None
+            quote = getattr(item, "source_text", None) or (item if isinstance(item, str) else None)
+            review.append(ReviewItem(page_id=rec.page_id, section=issue.section, field=issue.field,
+                                     reason=issue.reason, source_text=quote, blocking=issue.blocking))
+        gated.append(rec.model_copy(update={"extraction": gate(rec.extraction, issues)}) if issues else rec)
+    records = gated
+
     groups: dict[tuple, list[ExtractionRecord]] = defaultdict(list)
     for rec in records:
         groups[_encounter_key(rec)].append(rec)
@@ -182,6 +210,7 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
                 + len(x.illegible_notes)
             )
             node.needs_review += flagged
+            flagged += len(rec.issues)
             if flagged or status != "exact":
                 review_pages.append(rec.page_id)
             if x.patient.name:
@@ -204,6 +233,7 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
         episodes=episodes,
         lab_series=_lab_series(encounters),
         pages_needing_review=review_pages,
+        review_items=review,
     )
 
 

@@ -80,6 +80,21 @@ change and until the next one. It shows timing only, not cause.
 
 A local extractor replaces the cloud one only once its scores are close enough.
 
+## Keeping out invented facts
+
+The model only reads the page. Everything after that is plain rules in `engine/src/medtimeline/verify.py`, so the same pages always give the same history. Each extracted item must pass these checks before it enters the history:
+
+- Its quote must appear on the page. Typed PDFs are checked against the PDF's own text; scans are checked against the model's verbatim transcription.
+- Every number in a dose, strength, duration, lab value or vital must appear in that quote.
+- The drug, diagnosis, test or symptom name must appear in the quote, directly or as a known abbreviation (HTN, FBS, k/c/o and so on).
+- An episode count above one must be written on the page.
+- Dates are re-derived from the date as written. A model date that disagrees is dropped; a date the model inferred from words like "last week" is kept but marked as inferred.
+- Every word of a negative finding ("no fever") must be on the page.
+
+Items that fail are not shown as facts. They are listed in `review_items` with the reason, for a person to accept or correct. Nothing in the timeline logic is specific to one disease.
+
+Limitation: on handwritten scans, the quote is checked against the same model's transcription. A local OCR pass as an independent second reader is planned for the offline version.
+
 ## Adding an extractor (e.g. a local model)
 
 Implement `extract(page: PageInput) -> PageExtraction`, decorate the class with
