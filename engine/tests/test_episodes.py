@@ -43,7 +43,7 @@ def history():
         ], [_med("Levetiracetam", "750 mg"), _med("Clobazam", "10 mg", "HS")],
             tests=[
                 {"name": "MRI brain", "kind": "imaging", "status": "resulted", "value": "L hippocampal sclerosis", "confidence": 0.9, "source_text": "MRI"},
-                {"name": "Serum sodium", "kind": "lab", "status": "resulted", "value": "131", "unit": "mmol/L", "confidence": 0.9, "source_text": "Na 131"},
+                {"name": "Serum sodium", "kind": "lab", "status": "resulted", "value": "131", "unit": "mmol/L", "abnormal": True, "confidence": 0.9, "source_text": "Na 131"},
                 {"name": "EEG", "kind": "study", "status": "ordered", "confidence": 0.9, "source_text": "EEG"},
             ],
             negatives=["no fever", "no head injury"]),
@@ -117,3 +117,15 @@ def test_correlation_windows(history):
     assert clobazam.after.episodes == 4 and clobazam.after.worst_episodes == 0
     assert raise_1000.after is None  # nothing recorded after the last visit yet
     assert raise_750.previous_dose == "500 mg BD" and raise_750.dose == "750 mg BD"
+
+
+def test_visit_flags_mark_what_was_new(history):
+    from medtimeline.details import visit_flags
+
+    first = {(f.kind, f.text) for f in visit_flags(history, history.encounters[0].id)}
+    assert ("new_symptom", "seizures") in first
+    assert ("medication_change", "levetiracetam started, 500 mg BD") in first
+    third = {f.kind for f in visit_flags(history, history.encounters[2].id)}
+    assert third == {"medication_change", "abnormal_result"}  # clobazam started, low sodium
+    second = [f.kind for f in visit_flags(history, history.encounters[1].id)]
+    assert second == ["medication_change"]

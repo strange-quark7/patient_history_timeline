@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -103,3 +104,32 @@ def visit_detail(history: PatientHistory, encounter_id: str) -> VisitDetail:
         imaging=imaging,
         other_tests=other,
     )
+
+
+class VisitFlag(BaseModel):
+    kind: str = Field(description="'new_symptom', 'new_diagnosis', 'medication_change', 'abnormal_result' or 'emergency'.")
+    text: str
+
+
+def visit_flags(history: PatientHistory, encounter_id: str) -> list[VisitFlag]:
+    """What was new at this visit, for colour-coding it on the timeline."""
+    from medtimeline.correlation import medication_changes
+
+    visit = _encounter(history, encounter_id)
+    flags: list[VisitFlag] = []
+    if re.search(r"\b(er|ed|emergency|casualty|admission|admitted|ipd)\b", (visit.encounter_type or "").lower()):
+        flags.append(VisitFlag(kind="emergency", text=visit.encounter_type))
+    for s in history.symptoms:
+        if s.encounter_ids and s.encounter_ids[0] == visit.id:
+            flags.append(VisitFlag(kind="new_symptom", text=s.name))
+    for c in history.conditions:
+        if c.encounter_ids and c.encounter_ids[0] == visit.id:
+            flags.append(VisitFlag(kind="new_diagnosis", text=c.name))
+    for day, drug, kind, dose, prev, enc_id in medication_changes(history):
+        if enc_id == visit.id:
+            text = f"{drug} {kind}" + (f": {prev} to {dose}" if prev else (f", {dose}" if dose else ""))
+            flags.append(VisitFlag(kind="medication_change", text=text))
+    for t in visit.investigations:
+        if t.abnormal:
+            flags.append(VisitFlag(kind="abnormal_result", text=f"{t.name} {t.value or ''}".strip()))
+    return flags

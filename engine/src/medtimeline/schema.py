@@ -75,6 +75,7 @@ class Investigation(Sourced):
     value: Optional[str] = None
     unit: Optional[str] = None
     reference_range: Optional[str] = None
+    abnormal: Optional[bool] = Field(None, description="True if flagged high/low/abnormal on the page or outside its range.")
 
 
 class Vital(Sourced):
