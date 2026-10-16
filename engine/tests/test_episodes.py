@@ -17,7 +17,7 @@ def _med(name, strength, freq="BD"):
     return {"drug_as_written": name, "strength": strength, "frequency": freq, "confidence": 0.9, "source_text": name}
 
 
-def _page(n, date, episodes, meds, tests=(), negatives=(), complaints=("seizures",)):
+def _page(n, date, episodes, meds, tests=(), negatives=(), complaints=("seizures",), dx=()):
     return ExtractionRecord(
         page_id=f"p{n}", source_file=f"visit{n}.pdf", page_number=1, extractor="test",
         extraction=PageExtraction.model_validate({
@@ -25,6 +25,7 @@ def _page(n, date, episodes, meds, tests=(), negatives=(), complaints=("seizures
             "encounter": {"date_iso": date, "facility": "Neuro OPD"}, "patient": {"name": "Demo"},
             "complaints": list(complaints), "episodes": episodes, "medications": meds,
             "investigations": list(tests), "negative_history": list(negatives),
+            "diagnoses": [{"text": t, "known": known, "confidence": 0.9, "source_text": t} for t, known in dx],
         }),
     )
 
@@ -33,9 +34,9 @@ def _page(n, date, episodes, meds, tests=(), negatives=(), complaints=("seizures
 def history():
     return build_history([
         _page(1, "2024-03-14", [_ep("Jan 2024", "2024-01-15"), _ep("Feb 2024", "2024-02-20")],
-              [_med("Levetiracetam", "500 mg")]),
+              [_med("Levetiracetam", "500 mg")], dx=[("Focal epilepsy", False), ("Hypothyroidism", True)]),
         _page(2, "2024-07-02", [_ep("3 since last visit", None, count=3, precision="unknown")],
-              [_med("Levetiracetam", "750 mg")]),
+              [_med("Levetiracetam", "750 mg")], dx=[("Focal epilepsy", False), ("Hypothyroidism", True)]),
         _page(3, "2024-12-23", [
             _ep("Sep-Nov 2024", None, count=3, precision="unknown"),
             _ep("last night", "2024-12-22", worst=True, precision="day",
@@ -46,9 +47,9 @@ def history():
                 {"name": "Serum sodium", "kind": "lab", "status": "resulted", "value": "131", "unit": "mmol/L", "abnormal": True, "confidence": 0.9, "source_text": "Na 131"},
                 {"name": "EEG", "kind": "study", "status": "ordered", "confidence": 0.9, "source_text": "EEG"},
             ],
-            negatives=["no fever", "no head injury"]),
+            negatives=["no fever", "no head injury"], dx=[("Focal epilepsy", False), ("Hyponatraemia", False)]),
         _page(4, "2025-04-10", [_ep("4 brief ones", None, count=4, precision="unknown")],
-              [_med("Levetiracetam", "1000 mg")]),
+              [_med("Levetiracetam", "1000 mg")], dx=[("Focal epilepsy", False), ("Anxiety", False)]),
     ])
 
 
@@ -125,7 +126,13 @@ def test_visit_flags_mark_what_was_new(history):
     first = {(f.kind, f.text) for f in visit_flags(history, history.encounters[0].id)}
     assert ("new_symptom", "seizures") in first
     assert ("medication_change", "levetiracetam started, 500 mg BD") in first
-    third = {f.kind for f in visit_flags(history, history.encounters[2].id)}
-    assert third == {"medication_change", "abnormal_result"}  # clobazam started, low sodium
+    assert ("new_diagnosis", "Focal epilepsy") in first
+    assert ("known_comorbidity", "Hypothyroidism") in first
+    third = {(f.kind, f.text) for f in visit_flags(history, history.encounters[2].id)}
+    assert ("new_comorbidity", "Hyponatraemia") in third
+    assert not any(t == "Focal epilepsy" for _, t in third)  # already recorded at earlier visits
+    # Visit 2 repeats epilepsy and hypothyroidism, so only the dose change is new.
     second = [f.kind for f in visit_flags(history, history.encounters[1].id)]
     assert second == ["medication_change"]
+    fourth = {(f.kind, f.text) for f in visit_flags(history, history.encounters[3].id)}
+    assert ("new_comorbidity", "Anxiety") in fourth

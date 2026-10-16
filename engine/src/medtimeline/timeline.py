@@ -84,6 +84,8 @@ class Condition(BaseModel):
     last_seen: Optional[str]
     encounter_ids: list[str]
     episodes: list[Episode] = Field(default_factory=list)
+    role: str = Field("primary", description="'primary' (the condition seen at most visits) or 'comorbidity'.")
+    known_at_first_mention: bool = Field(False, description="First recorded as past history, so it predates the records.")
 
 
 class Symptom(BaseModel):
@@ -262,8 +264,16 @@ def _conditions(encounters: list[EncounterNode]) -> list[Condition]:
     out = []
     for name, mentions in _mentions(encounters, lambda e: [d.text for d in e.diagnoses]).values():
         first, last = _span(mentions)
-        out.append(Condition(name=name, first_seen=first, last_seen=last,
-                             encounter_ids=[i for _, i in mentions], episodes=episodes_from(mentions)))
+        enc_ids = [i for _, i in mentions]
+        first_enc = next((e for e in encounters if e.id == enc_ids[0]), None)
+        known = bool(first_enc) and any(d.known and _key(d.text) == _key(name) for d in first_enc.diagnoses)
+        out.append(Condition(name=name, first_seen=first, last_seen=last, encounter_ids=enc_ids,
+                             episodes=episodes_from(mentions), known_at_first_mention=known))
+    # The main condition is the one seen at the most visits (earliest wins a tie); the rest are comorbidities.
+    if out:
+        primary = min(out, key=lambda c: (-len(c.encounter_ids), c.first_seen or "9999"))
+        for c in out:
+            c.role = "primary" if c is primary else "comorbidity"
     return out
 
 

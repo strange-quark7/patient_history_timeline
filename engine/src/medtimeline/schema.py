@@ -53,6 +53,7 @@ class Patient(BaseModel):
 
 class Diagnosis(Sourced):
     text: str
+    known: bool = Field(False, description="True if listed as past history or a known case (k/c/o), not diagnosed at this visit.")
     icd10_suggestion: Optional[str] = Field(None, description="A suggestion only, never authoritative.")
 
 

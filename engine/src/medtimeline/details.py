@@ -107,7 +107,8 @@ def visit_detail(history: PatientHistory, encounter_id: str) -> VisitDetail:
 
 
 class VisitFlag(BaseModel):
-    kind: str = Field(description="'new_symptom', 'new_diagnosis', 'medication_change', 'abnormal_result' or 'emergency'.")
+    kind: str = Field(description="'new_symptom', 'new_diagnosis', 'new_comorbidity', 'known_comorbidity', "
+                                  "'medication_change', 'abnormal_result' or 'emergency'.")
     text: str
 
 
@@ -122,9 +123,14 @@ def visit_flags(history: PatientHistory, encounter_id: str) -> list[VisitFlag]:
     for s in history.symptoms:
         if s.encounter_ids and s.encounter_ids[0] == visit.id:
             flags.append(VisitFlag(kind="new_symptom", text=s.name))
+    # A condition is only flagged at the first visit that records it; later visits already knew about it.
     for c in history.conditions:
         if c.encounter_ids and c.encounter_ids[0] == visit.id:
-            flags.append(VisitFlag(kind="new_diagnosis", text=c.name))
+            if c.known_at_first_mention:
+                kind = "known_comorbidity"
+            else:
+                kind = "new_diagnosis" if c.role == "primary" else "new_comorbidity"
+            flags.append(VisitFlag(kind=kind, text=c.name))
     for day, drug, kind, dose, prev, enc_id in medication_changes(history):
         if enc_id == visit.id:
             text = f"{drug} {kind}" + (f": {prev} to {dose}" if prev else (f", {dose}" if dose else ""))
