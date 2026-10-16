@@ -5,7 +5,7 @@ import type { Bundle, Encounter, Episode, ReviewItem, Test } from "./types";
 export type Sel = { kind: "visit" | "episode" | "symptom" | "med" | "test" | "change" | "condition" | "review"; id: string };
 export type Tone = "info" | "warn" | "severe" | "plain";
 /** Label buttons for a review item: pick one of the options, leave it unsure, or undo a choice. */
-export type Choices = { key: string; options: string[]; resolved: boolean; choice: string | null };
+export type Choices = { key: string; options: string[]; resolved: boolean; choice: string | null; yesNo?: boolean };
 export type Row = { label?: string; value: string; link?: Sel; tone?: Tone; flagColor?: string; hollow?: boolean; choices?: Choices };
 export type Section = { heading: string; rows: Row[] };
 export type Detail = { kind: string; title: string; sub: string; badges: { text: string; tone: Tone }[]; sections: Section[] };
@@ -63,7 +63,8 @@ export function visitDetail(ix: Index, id: string): Detail {
   return {
     kind: v.encounter_type ? `Visit · ${v.encounter_type}` : "Visit",
     title: fmtDate(v.date), sub: [v.facility, v.clinician].filter(Boolean).join(" · "),
-    badges: [...(v.date_status === "ambiguous" ? [{ text: "Date could be read two ways", tone: "warn" as Tone }] : []), ...checkBadges(v)],
+    badges: [...(v.date_status === "ambiguous" ? [{ text: "Date could be read two ways", tone: "warn" as Tone }] : []), ...checkBadges(v),
+             ...(v.added_later ? [{ text: "Added later", tone: "plain" as Tone }] : [])],
     sections: [
       { heading: "Conditions at this visit", rows: v.condition_ids.map((c) => link(ix.cond(c)!.name, { kind: "condition", id: c }, roleText(ix.cond(c)!))) },
       { heading: "What was new at this visit", rows: v.flags.length ? v.flags.map((f) => ({ ...text(cap(f.text), flagType(f.kind)?.label), flagColor: flagType(f.kind)?.color, hollow: "hollow" in (flagType(f.kind) ?? {}) })) : none("Nothing new recorded") },
@@ -205,14 +206,15 @@ export function changeDetail(ix: Index, id: string, cond: string | null): Detail
   };
 }
 
-const SECTION_NAMES: Record<string, string> = { medications: "Medication", diagnoses: "Diagnosis", investigations: "Lab or scan", vitals: "Vital sign", episodes: "Episode", links: "Link to a condition", negative_history: "Negative history", encounter: "Visit date" };
+const SECTION_NAMES: Record<string, string> = { patient: "Patient", medications: "Medication", diagnoses: "Diagnosis", investigations: "Lab or scan", vitals: "Vital sign", episodes: "Episode", links: "Link to a condition", negative_history: "Negative history", encounter: "Visit date" };
 
 const where = (r: ReviewItem) => text(r.page ? `${r.page.file}, page ${r.page.page} (${r.page.script})` : r.page_id, "Page");
-const choicesOf = (r: ReviewItem): Choices => ({ key: r.key!, options: r.options, resolved: r.resolved, choice: r.choice });
+const choicesOf = (r: ReviewItem): Choices => ({ key: r.key!, options: r.options, resolved: r.resolved, choice: r.choice, yesNo: r.field === "identity" });
 
 export function reviewDetail(ix: Index): Detail {
   const open = openReview(ix.b.review_items);
-  const toLabel = open.filter((r) => r.key);
+  const samePatient = open.filter((r) => r.field === "identity");
+  const toLabel = open.filter((r) => r.key && r.field !== "identity");
   const failed = open.filter((r) => !r.key);
   const settled = ix.b.review_items.filter((r) => r.resolved);
   const notes = ix.b.review_items.filter((r) => !r.blocking && !r.key);
@@ -222,6 +224,13 @@ export function reviewDetail(ix: Index): Detail {
     badges: [{ text: "Not shown as facts", tone: "warn" }, ...(settled.length ? [{ text: `${settled.length} settled by you`, tone: "plain" as Tone }] : []),
              ...(notes.length ? [{ text: `${notes.length} caution${notes.length === 1 ? "" : "s"} shown on the timeline`, tone: "plain" as Tone }] : [])],
     sections: [
+      ...samePatient.map((r) => ({ heading: r.verdict === "mismatch" ? "Probably another patient" : "Same patient?", rows: [
+        text(r.question ?? "Is this page for this patient?"),
+        text(r.reading ?? "Nothing written", "On the page"),
+        text(r.reason, "Why it is in doubt", "warn"),
+        where(r),
+        { value: "", choices: choicesOf(r) },
+      ] })),
       ...toLabel.map((r) => ({ heading: r.field === "reading" ? `Unsure reading · ${SECTION_NAMES[r.section] ?? r.section}` : `Needs a label · ${SECTION_NAMES[r.section] ?? r.section}`, rows: [
         ...(r.source_text ? [text(`"${r.source_text}"`, "Written on the page")] : []),
         ...(r.value ? [text(r.value, "Value")] : []),
@@ -235,8 +244,9 @@ export function reviewDetail(ix: Index): Detail {
         text(cap(r.reason), "Why it was held out", "warn"),
       ] })),
       ...(settled.length ? [{ heading: "Settled by you", rows: settled.map((r) => ({
-        label: `${SECTION_NAMES[r.section] ?? r.section}${r.value ? ` · ${r.value}` : ""}`,
-        value: r.choice ? `Labelled "${r.choice}"` : r.field === "label" ? "Left unlabelled" : "Left unsure",
+        label: r.field === "identity" ? `Page ${r.page?.file ?? r.page_id}` : `${SECTION_NAMES[r.section] ?? r.section}${r.value ? ` · ${r.value}` : ""}`,
+        value: r.field === "identity" ? (r.choice === "yes" ? "Confirmed: same patient" : "Marked as another patient's page, left out")
+          : r.choice ? `Labelled "${r.choice}"` : r.field === "label" ? "Left unlabelled" : "Left unsure",
         choices: choicesOf(r),
       })) }] : []),
       ...(notes.length ? [{ heading: "Cautions kept on the timeline", rows: notes.map((r) => text(cap(r.reason), SECTION_NAMES[r.section] ?? r.section)) }] : []),

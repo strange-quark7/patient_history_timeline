@@ -14,7 +14,7 @@ Progress = Callable[[dict], None]
 
 
 def extract_folder(folder: str | Path, extractor, cache_dir: Optional[Path] = None,
-                   on_progress: Optional[Progress] = None) -> tuple[list[ExtractionRecord], list[str]]:
+                   on_progress: Optional[Progress] = None, batch: int = 0) -> tuple[list[ExtractionRecord], list[str]]:
     """Extract and verify every page. Cached pages are reused so nothing is paid for twice."""
     pages = load_folder(folder)
     records, failures = [], []
@@ -34,7 +34,7 @@ def extract_folder(folder: str | Path, extractor, cache_dir: Optional[Path] = No
         rec = ExtractionRecord(
             page_id=page.page_id, source_file=page.source_file, page_number=page.page_number,
             extractor=extractor.name, extraction=extraction,
-            issues=[i.model_dump() for i in issues], grounding=grounding,
+            issues=[i.model_dump() for i in issues], grounding=grounding, batch=batch,
         )
         records.append(rec)
         if cached:

@@ -18,6 +18,14 @@ What it does:
   the "9.4 ) 4500 ( 307000" blood count shorthand) or a name the reader is unsure of.
   Pick one, leave it unsure, or undo. Choices are saved per patient in
   `resolutions.json`, and anything labelled this way is marked "chosen by you".
+- Same-patient check: every page's name, age, sex and any hospital or phone number
+  are compared with the patient (engine `identity.py`). A page that only partly
+  matches, has no name, or has a conflicting age or sex is left out and asked about
+  in Needs review as a yes/no question.
+- Add pages: older reports found later are read and slot into the history by
+  their own dates. A note lists what changed (a diagnosis now first recorded
+  earlier, new drugs, pages that may be someone else's), and their visits are
+  marked "added later".
 - Drugs the page holds or stops end their bar on that day and show as a change.
 - One-page summary: an A4 sheet (timeline figure, conditions, current drugs,
   episodes, latest results, recent visits) with "Print or save as PDF".
@@ -104,5 +112,5 @@ Engine lines that are not valid JSON are logged to stderr and ignored.
 
 **Engine methods:** `info`, `demo`, `projects.list`, `projects.open`
 (`project_id`), `projects.create` (`name`, `folder`, `extractor`, `api_key?`),
-`projects.rebuild` (`project_id`), `review.resolve` (`project_id`, `key`, `choice` or
+`projects.rebuild` (`project_id`), `projects.add` (`project_id`, `folder`, `api_key?`), `review.resolve` (`project_id`, `key`, `choice` or
 `clear`). Builds emit `progress` events.

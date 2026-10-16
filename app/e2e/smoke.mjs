@@ -58,10 +58,10 @@ for (const theme of ["light", "dark"]) {
     await shot("3-review");
     const reviewCount = async () => Number((await page.getByRole("button", { name: /items? to review/ }).textContent()).match(/\d+/)[0]);
     const before = await reviewCount();
-    await page.getByRole("group", { name: "Label choices" }).first().getByRole("button", { name: "Haemoglobin" }).click();
+    await page.getByRole("group", { name: "Label choices" }).filter({ hasText: "Haemoglobin" }).first().getByRole("button", { name: "Haemoglobin" }).click();
     await page.getByText('Labelled "Haemoglobin"').waitFor();
     check(await reviewCount() === before - 1, "picking a label settles the item");
-    await page.getByRole("group", { name: "Label choices" }).first().getByRole("button", { name: "Leave unsure" }).click();
+    await page.getByRole("group", { name: "Label choices" }).filter({ hasText: "Leave unsure" }).first().getByRole("button", { name: "Leave unsure" }).click();
     await page.getByText("Left unlabelled").waitFor();
     await shot("3b-review-settled");
     await page.getByRole("button", { name: "Labs and scans", exact: true }).click();
@@ -71,6 +71,17 @@ for (const theme of ["light", "dark"]) {
     await page.getByRole("group", { name: "Label choices" }).filter({ hasText: "Undo" }).last().getByRole("button", { name: "Undo" }).click();
     await page.getByText("Left unlabelled").waitFor({ state: "detached" });
     check(await reviewCount() === before - 1, "undo reopens the item");
+
+    check(await page.getByText("Is this page for Meera Nair?").isVisible(), "page with a different age asks: same patient?");
+    await page.getByRole("button", { name: "No, someone else" }).click();
+    const settledNo = page.getByText("Marked as another patient's page, left out");
+    await settledNo.waitFor();
+    await settledNo.locator("..").getByRole("button", { name: "Undo" }).click();
+    await settledNo.waitFor({ state: "detached" });
+    await page.getByRole("button", { name: "Yes, same patient" }).click();
+    await page.getByText("Confirmed: same patient").waitFor();
+    await page.getByRole("button", { name: "Labs and scans", exact: true }).click();
+    check(await page.getByRole("button", { name: /^TSH/ }).first().isVisible(), "confirmed page joins the history");
     await page.getByRole("button", { name: "Visit tree", exact: true }).click();
     await page.getByRole("button", { name: "Visit 22 Jan 2025", exact: true }).dispatchEvent("click"); // the worst-seizure dot sits on top of this tick
     check(await page.getByText("Held or stopped at this visit").isVisible(), "held drug listed at its visit");
@@ -120,6 +131,41 @@ for (const theme of ["light", "dark"]) {
   }
   await page.close();
 }
+// A saved patient (fixture reader), then older pages added later through the app.
+{
+  const { writeFileSync } = await import("node:fs");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGP4DwABAQEAWk1v8QAAAABJRU5ErkJggg==", "base64");
+  const page_ = (dir, stem, date, name, age, dx, drug) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${stem}.png`), png);
+    const rx = `Tab ${drug} 500 mg 1-0-1`;
+    writeFileSync(join(dir, `${stem}.p1.json`), JSON.stringify({
+      transcription: `${date}\n${name} ${age}/M\n${dx}\n${rx}`, doc_type: "prescription", script: "handwritten",
+      encounter: { date_raw: date }, patient: { name, age, sex: "M" },
+      diagnoses: [{ text: dx, confidence: 0.9, source_text: dx }],
+      medications: [{ drug_as_written: drug, strength: "500 mg", frequency: "1-0-1", confidence: 0.9, source_text: rx }],
+    }));
+  };
+  const first = join(home, "src-first"), later = join(home, "src-later");
+  page_(first, "v1", "10/01/2024", "Ravi Kumar", "54", "Type 2 diabetes", "Metformin");
+  page_(later, "old", "05/06/2019", "Ravi Kumar", "49", "Type 2 diabetes", "Metformin");
+  page_(later, "other", "01/07/2019", "Ravi Shankar", "30", "Asthma", "Theophylline");
+  await fetch("http://127.0.0.1:8765/rpc", { method: "POST", body: JSON.stringify({ id: 1, method: "projects.create", params: { name: "Ravi Kumar", folder: first, extractor: "fixture" } }) });
+
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("dialog", (d) => d.accept(later));
+  await page.goto("http://localhost:5173/");
+  await page.getByRole("button", { name: /Ravi Kumar/ }).click();
+  await page.getByRole("button", { name: "Add pages" }).click();
+  await page.getByText("What changed with the pages you added").waitFor();
+  check(await page.getByText("Type 2 diabetes is now first recorded on 5 Jun 2019 (was 10 Jan 2024)", { exact: false }).isVisible(), "added pages: note says the diagnosis moved earlier");
+  check(await page.getByText("1 of them may be for a different patient", { exact: false }).isVisible(), "added pages: other patient's page held for yes/no");
+  check(await page.getByText("1 page is left out", { exact: false }).isVisible(), "left-out page counted in the header");
+  await page.screenshot({ path: `${out}light-13-added-pages.png`, fullPage: true });
+  await page.close();
+}
+
 check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 await browser.close();
 stop();

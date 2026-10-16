@@ -33,7 +33,7 @@ def test_demo_overlapping_symptom_and_held_out_items(demo):
         "type-2-diabetes-mellitus", "urinary-tract-infection", "urinary-tract-infection", None]
     blocking = [r for r in demo["review_items"] if r["blocking"]]
     assert {(r["section"], r["field"]) for r in blocking} == {("links", "condition"), ("medications", "source_text"),
-                                                              ("investigations", "label")}
+                                                              ("investigations", "label"), ("patient", "identity")}
     assert not any(m["id"] == "ciprofloxacin" for m in demo["medications"])
 
 
@@ -79,4 +79,4 @@ def test_stdio_protocol(tmp_path):
     replies = {r["id"]: r for r in map(json.loads, proc.stdout.splitlines())}
     assert "claude" in replies[1]["result"]["extractors"]
     assert "Unknown method" in replies[2]["error"]
-    assert replies[3]["result"]["bundle"]["patient"]["name"] == "[Patient name]"
+    assert replies[3]["result"]["bundle"]["patient"]["name"] == "Meera Nair"

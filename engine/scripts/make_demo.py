@@ -3,8 +3,8 @@
 The page text below stands in for what the reader transcribes; the extractions
 are what a good reader would return, an unlabelled blood count and an unsure reading
 with label choices for the reviewer, plus two deliberate mistakes (a drug not on
-the page, and a symptom link the page does not make) so the review list has
-something in it. Every item goes through the same verify checks as real pages.
+the page, and a symptom link the page does not make) and a page that is probably
+another patient's, so the review list has something in it. Every item goes through the same verify checks as real pages.
 
     python scripts/make_demo.py   # writes src/medtimeline/demo/records.json
 """
@@ -42,7 +42,7 @@ def link(item, condition, quote):
 PAGES = [
     ("gp-2024-01-18.pdf", "typed", """GREENFIELD FAMILY CLINIC
 Date: 18/01/2024    OPD
-Name: [Patient name]   Age/Sex: 46/F
+Name: Meera Nair   Age/Sex: 46/F
 C/o increased frequency of urination and thirst x 2 months - ?DM. Tiredness.
 K/c/o HTN on Tab Amlodipine 5 mg OD.
 K/c/o epilepsy (seizure disorder) since age 12, on Tab Levetiracetam 500 mg BD.
@@ -230,13 +230,22 @@ Rx: Tab Nitrofurantoin 50 mg 0-0-1 x 3 months - prophylaxis for recurrent UTI
         "investigations": [test("Ultrasound kidneys and bladder", "USG KUB (15/03/2025): Both kidneys normal in size and echotexture.",
                                 "Both kidneys normal in size and echotexture", None, False, kind="imaging")],
     }),
+    # A report filed with this patient's papers but probably someone else's: similar name, different age.
+    ("lab-2025-02-10.pdf", "typed", """SUNRISE DIAGNOSTICS
+Name: Meera N.    Age/Sex: 64/F    Date: 10/02/2025
+Thyroid profile: TSH 8.9 mIU/L (0.4-4.0)
+Impression: Raised TSH. Suggest clinical correlation.""", {
+        "doc_type": "lab_report", "encounter": {"date_raw": "10/02/2025", "date_iso": "2025-02-10", "facility": "Sunrise Diagnostics"},
+        "patient": {"name": "Meera N.", "age": "64", "sex": "F"},
+        "investigations": [test("TSH", "TSH 8.9 mIU/L (0.4-4.0)", "8.9", "mIU/L", True, ref="0.4-4.0")],
+    }),
 ]
 
 
 def main() -> None:
     records = []
     for n, (filename, script, text, data) in enumerate(PAGES, start=1):
-        x = PageExtraction.model_validate({"transcription": text, "script": script, "patient": {"name": "[Patient name]", "age": "46", "sex": "F"}, **data})
+        x = PageExtraction.model_validate({"transcription": text, "script": script, "patient": {"name": "Meera Nair", "age": "46", "sex": "F"}, **data})
         issues, grounding = verify_page(x, text if script == "typed" else None)
         records.append(ExtractionRecord(page_id=f"demo-{n:02d}", source_file=f"demo/{filename}", page_number=1, extractor="demo",
                                         extraction=x, issues=[i.model_dump() for i in issues], grounding=grounding))

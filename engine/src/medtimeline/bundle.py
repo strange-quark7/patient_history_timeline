@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from medtimeline import normalize
+from medtimeline import identity, normalize
 from medtimeline.correlation import correlate, medication_changes
 from medtimeline.details import episode_detail, medications_on, visit_flags
 from medtimeline.schema import ExtractionRecord
@@ -26,14 +26,31 @@ def _dose(m) -> str:
     return " ".join(x for x in [m.strength, normalize.expand_frequency(m.frequency) or m.frequency] if x)
 
 
+def _identity_review(p: identity.PageIdentity, profile: identity.Profile, page: dict) -> dict:
+    said = ", ".join(x for x in [p.name_on_page or "no name", p.age_on_page and f"age {p.age_on_page}", p.sex_on_page] if x)
+    return {"page_id": p.page_id, "section": "patient", "field": "identity", "blocking": True,
+            "reason": "; ".join(p.reasons) or "Not checked", "source_text": None, "page": page,
+            "key": identity.key(p.page_id), "reading": said, "value": None, "options": [identity.YES, identity.NO],
+            "resolved": p.answer is not None, "choice": p.answer, "verdict": p.verdict, "question": f"Is this page for {profile.name}?"}
+
+
 def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistory] = None,
-                resolutions: Optional[dict[str, dict]] = None) -> dict:
+                resolutions: Optional[dict[str, dict]] = None, patient_name: Optional[str] = None) -> dict:
+    """`patient_name` is what the user called the patient; pages are checked against it (see identity.py)
+    and only pages that match, or that a reviewer confirmed, go into the history."""
+    all_pages = {r.page_id: {"page_id": r.page_id, "file": r.source_file.rsplit("/", 1)[-1], "page": r.page_number,
+                             "grounding": r.grounding, "script": r.extraction.script.value, "doc_type": r.extraction.doc_type.value,
+                             "batch": r.batch} for r in records}
+    profile, checks = identity.check_pages(records, patient_name, resolutions)
+    for c in checks:
+        all_pages[c.page_id]["identity"] = c.verdict if c.answer is None else ("confirmed" if c.answer == identity.YES else "not this patient")
+    keep = {c.page_id for c in checks if c.included}
+    identity_items = [_identity_review(c, profile, all_pages[c.page_id]) for c in checks if c.verdict != "match" or c.answer]
+    records = [r for r in records if r.page_id in keep]
     h = history or build_history(records, resolutions)
     cond_id = {c.name: slug(c.name) for c in h.conditions}
     names = list(cond_id)
-    pages = {r.page_id: {"page_id": r.page_id, "file": r.source_file.rsplit("/", 1)[-1], "page": r.page_number,
-                         "grounding": r.grounding, "script": r.extraction.script.value, "doc_type": r.extraction.doc_type.value}
-             for r in records}
+    pages = {p: all_pages[p] for p in keep}
     dates = [e.date for e in h.encounters if e.date] + [ep.date for ep in h.episodes if ep.date]
     enc_by_id = {e.id: e for e in h.encounters}
     last_visit = max((e.date for e in h.encounters if e.date), default=None)
@@ -101,6 +118,7 @@ def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistor
             "episode_ids": [ep.id for ep in h.episodes if ep.reported_at == e.id],
             "medications_at_time": [{"med_id": slug(m.drug), "dose": _dose(m.dose)} for m in medications_on(h, e.date)],
             "pages": [pages[p] for p in e.page_ids if p in pages],
+            "added_later": all(pages[p]["batch"] > 0 for p in e.page_ids if p in pages),
             "needs_review": e.needs_review,
         })
 
@@ -113,11 +131,57 @@ def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistor
     } for s in h.symptoms]
 
     return {
-        "patient": {"name": h.patient_name, "conflicts": h.patient_conflicts},
+        "patient": {"name": profile.name or h.patient_name, "sex": profile.sex, "born_about": profile.born_about,
+                    "identifiers": profile.identifiers},
+        "pages_left_out": [all_pages[c.page_id] for c in checks if not c.included],
         "span": {"start": min(dates, default=None), "end": max(dates, default=None)},
         "conditions": conditions, "encounters": encounters, "episodes": episodes, "symptoms": symptoms,
         "medications": meds, "changes": changes, "tests": tests,
         "correlation": {"all": corr(None), **{cond_id[c.name]: corr(c.name) for c in h.conditions}},
-        "review_items": [{**r.model_dump(), "page": pages.get(r.page_id)} for r in h.review_items],
+        "review_items": identity_items + [{**r.model_dump(), "page": pages.get(r.page_id)} for r in h.review_items],
         "pages_needing_review": h.pages_needing_review,
     }
+
+
+MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def _day(d: Optional[str]) -> str:
+    if not d:
+        return "an undated visit"
+    y, m, dd = d.split("-")
+    return f"{int(dd)} {MONTHS[int(m) - 1]} {y}"
+
+
+def update_notes(before: dict, after: dict, new_page_ids: set[str]) -> list[str]:
+    """What a later upload changed, in plain words, by comparing the bundle before and after."""
+    n = len(new_page_ids)
+    notes = [f"{n} page{'s' if n != 1 else ''} added."]
+    doubts = [r for r in after["review_items"] if r["field"] == "identity" and not r["resolved"] and r["page_id"] in new_page_ids]
+    if doubts:
+        notes.append(f"{len(doubts)} of them may be for a different patient and {'is' if len(doubts) == 1 else 'are'} "
+                     f"left out until you answer yes or no in Needs review.")
+    old_dates = {e["date"] for e in before["encounters"]}
+    new_visits = sorted((e["date"] or "") for e in after["encounters"]
+                        if any(p["page_id"] in new_page_ids for p in e["pages"]) and e["date"] not in old_dates)
+    if new_visits:
+        earliest, first_before = new_visits[0] or None, before["span"]["start"]
+        older = " (earlier than anything recorded before)" if earliest and first_before and earliest < first_before else ""
+        notes.append(f"{len(new_visits)} visit{'s' if len(new_visits) != 1 else ''} added"
+                     f"{f', the earliest on {_day(earliest)}' if earliest else ''}{older}.")
+    was = {c["name"]: c for c in before["conditions"]}
+    for c in after["conditions"]:
+        old = was.get(c["name"])
+        if not old:
+            notes.append(f"{c['name']} appears for the first time, first recorded on {_day(c['first_seen'])}.")
+        elif c["first_seen"] and old["first_seen"] and c["first_seen"] < old["first_seen"]:
+            notes.append(f"{c['name']} is now first recorded on {_day(c['first_seen'])} (was {_day(old['first_seen'])}), "
+                         f"so its 'new diagnosis' marker moves to that visit.")
+    was_meds = {m["id"]: m for m in before["medications"]}
+    for m in after["medications"]:
+        old = was_meds.get(m["id"])
+        if not old:
+            notes.append(f"{m['label']} appears for the first time, on {_day(m['start'] or m['end'])}.")
+        elif m["start"] and old["start"] and m["start"] < old["start"]:
+            notes.append(f"{m['label']} is now first recorded on {_day(m['start'])} (was {_day(old['start'])}).")
+    return notes

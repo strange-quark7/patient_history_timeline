@@ -1,7 +1,12 @@
 // Shapes returned by the engine (engine/src/medtimeline/bundle.py). The app only displays them.
 
 export type Flag = { kind: string; text: string };
-export type Page = { page_id: string; file: string; page: number; grounding: string; script: string; doc_type: string };
+export type Page = {
+  page_id: string; file: string; page: number; grounding: string; script: string; doc_type: string;
+  /** 0 = first build; higher = added later. */
+  batch: number;
+  identity?: "match" | "doubt" | "mismatch" | "confirmed" | "not this patient";
+};
 export type Dose = { med_id: string; dose: string };
 
 export type Condition = {
@@ -17,7 +22,7 @@ export type Encounter = {
   diagnoses: { text: string; known: boolean }[]; vitals: { name: string; value: string; unit: string | null }[];
   medications: { med_id: string; label: string; dose: string; duration: string | null; status: MedStatus }[];
   condition_ids: string[]; flags: Flag[]; test_ids: string[]; episode_ids: string[];
-  medications_at_time: Dose[]; pages: Page[]; needs_review: number;
+  medications_at_time: Dose[]; pages: Page[]; needs_review: number; added_later: boolean;
 };
 
 export type Episode = {
@@ -59,10 +64,14 @@ export type ReviewItem = {
   key: string | null; reading: string | null; value: string | null; options: string[];
   /** resolved with choice null means "left unsure". */
   resolved: boolean; choice: string | null;
+  /** Same-patient checks (field "identity") only: the yes/no question and what the checks found. */
+  question?: string; verdict?: "match" | "doubt" | "mismatch";
 };
 
 export type Bundle = {
-  patient: { name: string | null; conflicts: string[] };
+  patient: { name: string | null; sex: string | null; born_about: number | null; identifiers: string[] };
+  /** Pages kept out because they may be another patient's (or a reviewer said so). */
+  pages_left_out: Page[];
   span: { start: string | null; end: string | null };
   conditions: Condition[]; encounters: Encounter[]; episodes: Episode[]; symptoms: Symptom[];
   medications: Medication[]; changes: Change[]; tests: Test[];
@@ -70,5 +79,10 @@ export type Bundle = {
   review_items: ReviewItem[]; pages_needing_review: string[];
 };
 
-export type Project = { id: string; name: string; source_folder?: string; extractor?: string; updated?: number; pages?: number; failures?: string[] };
+export type Project = {
+  id: string; name: string; source_folder?: string; source_folders?: string[]; extractor?: string; updated?: number; pages?: number;
+  failures?: string[];
+  /** What the most recent upload of extra pages changed. */
+  last_update?: { at: number; batch: number; pages_added: number; notes: string[] } | null;
+};
 export type Opened = { project: Project; bundle: Bundle; failures?: string[] };

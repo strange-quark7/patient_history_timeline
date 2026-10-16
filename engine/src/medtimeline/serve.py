@@ -15,11 +15,12 @@ import json
 import os
 import sys
 import threading
+import time
 import traceback
 from importlib import resources
 from typing import Callable, Optional
 
-from medtimeline.bundle import make_bundle
+from medtimeline.bundle import make_bundle, update_notes
 from medtimeline.extract import available_extractors, get_extractor
 from medtimeline.ingest import load_folder
 from medtimeline.pipeline import extract_folder
@@ -27,6 +28,7 @@ from medtimeline.schema import ExtractionRecord
 from medtimeline.store import Store
 
 Emit = Callable[[str, dict], None]
+DEMO_NAME = "Meera Nair"
 
 
 def demo_records() -> list[ExtractionRecord]:
@@ -44,16 +46,18 @@ class Service:
         return {"extractors": available_extractors(), "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
     def demo(self) -> dict:
-        return {"project": {"id": "demo", "name": "Demo patient (made-up data)"},
-                "bundle": make_bundle(demo_records(), resolutions=self.demo_resolutions)}
+        return {"project": {"id": "demo", "name": DEMO_NAME + " (made-up demo patient)"},
+                "bundle": make_bundle(demo_records(), resolutions=self.demo_resolutions, patient_name=DEMO_NAME)}
 
     def projects_list(self) -> list[dict]:
         return self.store.list()
 
     def projects_open(self, project_id: str) -> dict:
-        records = self.store.records(project_id)
-        return {"project": {"id": project_id, **self.store.meta(project_id)},
-                "bundle": make_bundle(records, resolutions=self.store.resolutions(project_id))}
+        return {"project": {"id": project_id, **self.store.meta(project_id)}, "bundle": self._bundle(project_id)}
+
+    def _bundle(self, project_id: str, only: Optional[set[str]] = None) -> dict:
+        records = [r for r in self.store.records(project_id) if only is None or r.page_id in only]
+        return make_bundle(records, resolutions=self.store.resolutions(project_id), patient_name=self.store.meta(project_id)["name"])
 
     def review_resolve(self, project_id: str, key: str, choice: Optional[str] = None, clear: bool = False) -> dict:
         """Pick a label for a review item (choice), leave it unsure (choice None), or undo (clear). Returns the new bundle."""
@@ -75,21 +79,51 @@ class Service:
         kwargs = {"model": model} if (extractor == "claude" and model) else {}
         ex = get_extractor(extractor, **kwargs)
         project_id = self.store.create(name, folder, extractor)
-        return self._build(project_id, folder, ex)
+        return self._build(project_id, ex)
+
+    def projects_add(self, project_id: str, folder: str, api_key: Optional[str] = None) -> dict:
+        """Add pages from another folder, e.g. older reports found later. They slot into the history by date."""
+        if not load_folder(folder):
+            raise ValueError("No PDF, Word or image files found in that folder.")
+        if api_key:
+            os.environ["ANTHROPIC_API_KEY"] = api_key  # this process only; never written to disk
+        meta = self.store.meta(project_id)
+        folders = self._folders(meta)
+        if folder not in folders:
+            self.store.touch(project_id, source_folders=folders + [folder])
+        return self._build(project_id, get_extractor(meta["extractor"]))
 
     def projects_rebuild(self, project_id: str) -> dict:
-        meta = self.store.meta(project_id)
-        return self._build(project_id, meta["source_folder"], get_extractor(meta["extractor"]))
+        """Read the source folders again; pages already read are reused, new files are read and added."""
+        return self._build(project_id, get_extractor(self.store.meta(project_id)["extractor"]))
 
-    def _build(self, project_id: str, folder: str, ex) -> dict:
-        records, failures = extract_folder(folder, ex, self.store.records_dir(project_id),
-                                           lambda p: self.emit("progress", {"project_id": project_id, **p}))
-        self.store.touch(project_id, pages=len(records), failures=failures)
+    @staticmethod
+    def _folders(meta: dict) -> list[str]:
+        return meta.get("source_folders") or [meta["source_folder"]]
+
+    def _build(self, project_id: str, ex) -> dict:
+        meta = self.store.meta(project_id)
+        before_ids = {r.page_id for r in self.store.records(project_id)}
+        batch = meta.get("batches", 0)
+        records, failures = [], []
+        for folder in self._folders(meta):
+            got, failed = extract_folder(folder, ex, self.store.records_dir(project_id),
+                                         lambda p: self.emit("progress", {"project_id": project_id, **p}),
+                                         batch=batch)
+            records += got
+            failures += failed
+        new_ids = {r.page_id for r in records} - before_ids
+        update = meta.get("last_update")
+        if before_ids and new_ids:
+            notes = update_notes(self._bundle(project_id, before_ids), self._bundle(project_id), new_ids)
+            update = {"at": time.time(), "batch": batch, "pages_added": len(new_ids), "notes": notes}
+        self.store.touch(project_id, pages=len(records), failures=failures, batches=batch + (1 if new_ids else 0),
+                         last_update=update)
         return {**self.projects_open(project_id), "failures": failures}
 
     METHODS = {
         "info": "info", "demo": "demo", "projects.list": "projects_list", "projects.open": "projects_open",
-        "projects.create": "projects_create", "projects.rebuild": "projects_rebuild", "review.resolve": "review_resolve",
+        "projects.create": "projects_create", "projects.rebuild": "projects_rebuild", "review.resolve": "review_resolve", "projects.add": "projects_add",
     }
 
     def call(self, method: str, params: Optional[dict]) -> object:

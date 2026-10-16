@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { Index, detailFor, type Choices, type Detail, type Sel } from "../details";
 import { CHANGE_MARK, FLAG_TYPES, cap, episodeWhen, fmtDate, makeFilter, makeScale, openReview, pct, roleText, verdict, type FlagType } from "../model";
-import type { Bundle, Encounter } from "../types";
+import type { Bundle, Encounter, Project } from "../types";
 
 type Lens = "tree" | "symptoms" | "episodes" | "meds" | "tests" | "corr";
 const LENSES: [Lens, string][] = [["tree", "Visit tree"], ["symptoms", "Symptoms"], ["episodes", "Episodes"], ["meds", "Medications"], ["tests", "Labs and scans"], ["corr", "Correlation"]];
@@ -22,9 +22,19 @@ const swatch = (f: FlagType | undefined, w: number, h: number): CSSProperties =>
 /** Save a review choice: a label, null to leave it unsure, or undefined to undo. */
 export type Resolve = (key: string, choice: string | null | undefined) => Promise<void>;
 
-export function Explorer({ bundle, title, onBack, dark, onTheme, onResolve, onSummary }: {
+export function Explorer({ bundle, title, onBack, dark, onTheme, onResolve, onSummary, update, onAddPages }: {
   bundle: Bundle; title: string; onBack: () => void; dark: boolean; onTheme: () => void; onResolve: Resolve; onSummary: () => void;
+  update?: Project["last_update"];
+  /** Absent for the demo patient, which has no folder to add to. */
+  onAddPages?: () => Promise<void>;
 }) {
+  const [seenUpdate, setSeenUpdate] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const addPages = async () => {
+    setAdding(true); setAddError(null);
+    try { await onAddPages!(); } catch (e) { setAddError(String((e as Error).message ?? e)); } finally { setAdding(false); }
+  };
   const ix = useMemo(() => new Index(bundle), [bundle]);
   const scale = useMemo(() => makeScale(bundle), [bundle]);
   const firstSel: Sel = bundle.episodes.find((e) => e.is_worst) ? { kind: "episode", id: bundle.episodes.find((e) => e.is_worst)!.id }
@@ -59,7 +69,19 @@ export function Explorer({ bundle, title, onBack, dark, onTheme, onResolve, onSu
           <button className="linkrow" style={{ fontSize: 14 }} onClick={onBack}>← All patients</button>
           <h1 style={{ margin: 0, fontSize: 30, fontWeight: 700, letterSpacing: "-0.01em" }}>{name}</h1>
           <div className="muted" style={{ fontSize: 15 }}>{summary}</div>
-          {bundle.patient.conflicts.length > 0 && <div className="error">These pages name different patients: {bundle.patient.conflicts.join(", ")}. Check that they belong together.</div>}
+          {bundle.pages_left_out.length > 0 && (
+            <div className="muted" style={{ fontSize: 14 }}>
+              {bundle.pages_left_out.length} page{bundle.pages_left_out.length === 1 ? " is" : "s are"} left out because {bundle.pages_left_out.length === 1 ? "it" : "they"} may be another patient's.
+            </div>
+          )}
+          {update && seenUpdate !== update.at && (
+            <div className="notice" role="status">
+              <strong>What changed with the pages you added</strong>
+              <ul>{update.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+              <div><button className="btn" onClick={() => setSeenUpdate(update.at)}>Got it</button></div>
+            </div>
+          )}
+          {addError && <div className="error">{addError}</div>}
           {blocking > 0 && (
             <div><button className={`review${sel.kind === "review" ? " on" : ""}`} onClick={pick({ kind: "review", id: "all" })}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l9.5 17h-19z" /><path d="M12 10v4M12 17.5v.5" /></svg>
@@ -73,6 +95,7 @@ export function Explorer({ bundle, title, onBack, dark, onTheme, onResolve, onSu
               <button key={id} className={`tab${lens === id ? " on" : ""}`} onClick={() => { setLens(id); setSort(SORTS[id][0]?.[0] ?? "asc"); if (id === "corr" && sel.kind !== "change") { const first = bundle.changes.find((c) => f.med(ix.med(c.med_id)!)); if (first) setSel({ kind: "change", id: first.id }); } }}>{label}</button>
             ))}
           </nav>
+          {onAddPages && <button className="btn" disabled={adding} onClick={addPages}>{adding ? "Reading pages…" : "Add pages"}</button>}
           <button className="btn" onClick={onSummary}>One-page summary</button>
           <button className="theme" aria-label={dark ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={dark} onClick={onTheme}>
             {dark ? <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
@@ -220,7 +243,7 @@ function ListPanel({ bundle, ix, lens, sort, setSort, cond, flag, isSel, pick }:
                     <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "0 0 auto" }}><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 8h6M12 5v6M8 15h8M8 18h5" /></svg>
                     <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <span style={{ fontWeight: 600 }}>{fmtDate(v.date)}</span>
-                      <span className="muted" style={{ fontSize: 13 }}>{[v.facility, v.condition_ids.map((c) => ix.cond(c)!.short).join(", ")].filter(Boolean).join(" · ")}</span>
+                      <span className="muted" style={{ fontSize: 13 }}>{[v.facility, v.condition_ids.map((c) => ix.cond(c)!.short).join(", "), v.added_later ? "added later" : ""].filter(Boolean).join(" · ")}</span>
                       <span style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                         {flags.map((x, i) => { const t = FLAG_TYPES.find((ft) => ft.kind === x.kind); return <span key={i} className="flagchip"><span style={swatch(t, 9, 9)} />{cap(x.text)}</span>; })}
                       </span>
@@ -413,8 +436,13 @@ function ChoiceButtons({ c, onResolve }: { c: Choices; onResolve: Resolve }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div role="group" aria-label="Label choices" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {c.resolved ? <button className="btn" disabled={busy} onClick={run(undefined)}>Undo</button> : (<>
-          {c.options.map((o) => <button key={o} className="btn" disabled={busy} onClick={run(o)}>{o}</button>)}
-          <button className="btn quiet" disabled={busy} onClick={run(null)}>Leave unsure</button>
+          {c.yesNo ? (<>
+            <button className="btn" disabled={busy} onClick={run("yes")}>Yes, same patient</button>
+            <button className="btn" disabled={busy} onClick={run("no")}>No, someone else</button>
+          </>) : (<>
+            {c.options.map((o) => <button key={o} className="btn" disabled={busy} onClick={run(o)}>{o}</button>)}
+            <button className="btn quiet" disabled={busy} onClick={run(null)}>Leave unsure</button>
+          </>)}
         </>)}
       </div>
       {err && <div className="error">{err}</div>}

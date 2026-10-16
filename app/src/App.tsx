@@ -43,6 +43,17 @@ export default function App() {
   };
 
   if (opened) {
+    const addPages = async () => {
+      const folder = isDesktop ? await pickFolder() : window.prompt("Folder with the pages to add (a path on this computer):");
+      if (!folder) return;
+      const info = await call<{ has_api_key: boolean }>("info");
+      let api_key: string | undefined;
+      if (opened.project.extractor === "claude" && !info.has_api_key) {
+        api_key = window.prompt("Anthropic API key for reading the new pages (kept in memory only, never saved):") ?? undefined;
+        if (!api_key) return;
+      }
+      setOpened(await call<Opened>("projects.add", { project_id: opened.project.id, folder, ...(api_key ? { api_key } : {}) }));
+    };
     const resolve = async (key: string, choice: string | null | undefined) => {
       const params = choice === undefined ? { project_id: opened.project.id, key, clear: true } : { project_id: opened.project.id, key, choice };
       setOpened(await call<Opened>("review.resolve", params));
@@ -52,7 +63,8 @@ export default function App() {
       {summary && <Summary bundle={opened.bundle} title={opened.project.name} onBack={() => setSummary(false)} />}
       <div hidden={summary}>
         <Explorer key={opened.project.id} bundle={opened.bundle} title={opened.project.name} onBack={() => { setSummary(false); setOpened(null); }}
-          dark={dark} onTheme={toggleTheme} onResolve={resolve} onSummary={() => setSummary(true)} />
+          dark={dark} onTheme={toggleTheme} onResolve={resolve} onSummary={() => setSummary(true)}
+          update={opened.project.last_update} onAddPages={opened.project.id === "demo" ? undefined : addPages} />
       </div>
     </>);
   }

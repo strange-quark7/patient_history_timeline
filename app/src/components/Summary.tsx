@@ -59,7 +59,9 @@ export function Summary({ bundle, title, onBack }: { bundle: Bundle; title: stri
           <div>
             <h1>{name}</h1>
             <div className="muted">
-              {[`${visits.length} visit${visits.length === 1 ? "" : "s"}`, bundle.span.start ? `${fmtDate(bundle.span.start)} to ${fmtDate(bundle.span.end)}` : null,
+              {[bundle.patient.sex === "F" ? "Female" : bundle.patient.sex === "M" ? "Male" : null,
+                bundle.patient.born_about ? `born about ${bundle.patient.born_about}` : null,
+                `${visits.length} visit${visits.length === 1 ? "" : "s"}`, bundle.span.start ? `${fmtDate(bundle.span.start)} to ${fmtDate(bundle.span.end)}` : null,
                 `${pages} page${pages === 1 ? "" : "s"} read`].filter(Boolean).join(" · ")}
             </div>
           </div>
@@ -155,6 +157,7 @@ export function Summary({ bundle, title, onBack }: { bundle: Bundle; title: stri
         <footer className="sheet-foot muted">
           Every fact above was checked against the page it was read from.{" "}
           {open ? `${open} item${open === 1 ? "" : "s"} still waiting for review ${open === 1 ? "is" : "are"} left out. ` : "Nothing is waiting for review. "}
+          {bundle.pages_left_out.length ? `${bundle.pages_left_out.length} page${bundle.pages_left_out.length === 1 ? " that may be another patient's is" : "s that may be another patient's are"} left out. ` : ""}
           {labelled ? `${labelled} label${labelled === 1 ? " was" : "s were"} chosen by a reviewer, not written on the page. ` : ""}
           Lining up medication and episodes shows timing only, not cause. This summary does not replace the source records.
         </footer>

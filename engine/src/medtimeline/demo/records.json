@@ -5,7 +5,7 @@
   "page_number": 1,
   "extractor": "demo",
   "extraction": {
-   "transcription": "GREENFIELD FAMILY CLINIC\nDate: 18/01/2024    OPD\nName: [Patient name]   Age/Sex: 46/F\nC/o increased frequency of urination and thirst x 2 months - ?DM. Tiredness.\nK/c/o HTN on Tab Amlodipine 5 mg OD.\nK/c/o epilepsy (seizure disorder) since age 12, on Tab Levetiracetam 500 mg BD.\nO/E: BP 136/84 mmHg. BMI 31.\nInv: HbA1c 8.6 %  FBS 172 mg/dl\nDiagnosis: Type 2 diabetes mellitus (new). Hypertension. Epilepsy.\nRx:\n1. Tab Metformin 500 mg 1-0-1 x 30 days\n2. Tab Amlodipine 5 mg 1-0-0 x 30 days\n3. Tab Levetiracetam 500 mg 1-0-1 x 30 days\nReview in 3 months.",
+   "transcription": "GREENFIELD FAMILY CLINIC\nDate: 18/01/2024    OPD\nName: Meera Nair   Age/Sex: 46/F\nC/o increased frequency of urination and thirst x 2 months - ?DM. Tiredness.\nK/c/o HTN on Tab Amlodipine 5 mg OD.\nK/c/o epilepsy (seizure disorder) since age 12, on Tab Levetiracetam 500 mg BD.\nO/E: BP 136/84 mmHg. BMI 31.\nInv: HbA1c 8.6 %  FBS 172 mg/dl\nDiagnosis: Type 2 diabetes mellitus (new). Hypertension. Epilepsy.\nRx:\n1. Tab Metformin 500 mg 1-0-1 x 30 days\n2. Tab Amlodipine 5 mg 1-0-0 x 30 days\n3. Tab Levetiracetam 500 mg 1-0-1 x 30 days\nReview in 3 months.",
    "doc_type": "case_sheet",
    "script": "typed",
    "encounter": {
@@ -18,7 +18,7 @@
     "encounter_type": "OPD"
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -177,7 +177,8 @@
    "illegible_notes": []
   },
   "issues": [],
-  "grounding": "text_layer"
+  "grounding": "text_layer",
+  "batch": 0
  },
  {
   "page_id": "demo-02",
@@ -198,7 +199,7 @@
     "encounter_type": null
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -378,7 +379,8 @@
    "illegible_notes": []
   },
   "issues": [],
-  "grounding": "transcription"
+  "grounding": "transcription",
+  "batch": 0
  },
  {
   "page_id": "demo-03",
@@ -399,7 +401,7 @@
     "encounter_type": null
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -530,7 +532,8 @@
     "blocking": false
    }
   ],
-  "grounding": "transcription"
+  "grounding": "transcription",
+  "batch": 0
  },
  {
   "page_id": "demo-04",
@@ -551,7 +554,7 @@
     "encounter_type": null
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -690,7 +693,8 @@
    "illegible_notes": []
   },
   "issues": [],
-  "grounding": "transcription"
+  "grounding": "transcription",
+  "batch": 0
  },
  {
   "page_id": "demo-05",
@@ -711,7 +715,7 @@
     "encounter_type": "OPD"
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -836,7 +840,8 @@
     "blocking": true
    }
   ],
-  "grounding": "text_layer"
+  "grounding": "text_layer",
+  "batch": 0
  },
  {
   "page_id": "demo-06",
@@ -857,7 +862,7 @@
     "encounter_type": "Emergency"
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -1034,7 +1039,8 @@
     "blocking": false
    }
   ],
-  "grounding": "text_layer"
+  "grounding": "text_layer",
+  "batch": 0
  },
  {
   "page_id": "demo-07",
@@ -1055,7 +1061,7 @@
     "encounter_type": "Emergency"
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -1276,7 +1282,8 @@
     "blocking": true
    }
   ],
-  "grounding": "transcription"
+  "grounding": "transcription",
+  "batch": 0
  },
  {
   "page_id": "demo-08",
@@ -1297,7 +1304,7 @@
     "encounter_type": null
    },
    "patient": {
-    "name": "[Patient name]",
+    "name": "Meera Nair",
     "age": "46",
     "sex": "F",
     "identifiers": []
@@ -1397,6 +1404,64 @@
    "illegible_notes": []
   },
   "issues": [],
-  "grounding": "text_layer"
+  "grounding": "text_layer",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-09",
+  "source_file": "demo/lab-2025-02-10.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "SUNRISE DIAGNOSTICS\nName: Meera N.    Age/Sex: 64/F    Date: 10/02/2025\nThyroid profile: TSH 8.9 mIU/L (0.4-4.0)\nImpression: Raised TSH. Suggest clinical correlation.",
+   "doc_type": "lab_report",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "10/02/2025",
+    "date_iso": "2025-02-10",
+    "date_ambiguous": false,
+    "facility": "Sunrise Diagnostics",
+    "clinician": null,
+    "department": null,
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera N.",
+    "age": "64",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [],
+   "history": null,
+   "episodes": [],
+   "negative_history": [],
+   "examination": null,
+   "diagnoses": [],
+   "medications": [],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "TSH 8.9 mIU/L (0.4-4.0)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "TSH",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "8.9",
+     "unit": "mIU/L",
+     "reference_range": "0.4-4.0",
+     "abnormal": true
+    }
+   ],
+   "vitals": [],
+   "links": [],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "text_layer",
+  "batch": 0
  }
 ]

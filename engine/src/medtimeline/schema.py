@@ -169,3 +169,4 @@ class ExtractionRecord(BaseModel):
     extraction: PageExtraction
     issues: list = Field(default_factory=list, description="verify.Issue entries from the deterministic checks.")
     grounding: str = Field("unchecked", description="What quotes were checked against: text_layer, transcription, none or unchecked.")
+    batch: int = Field(0, description="Which upload the page came in: 0 for the first build, then 1, 2, ... for pages added later.")
