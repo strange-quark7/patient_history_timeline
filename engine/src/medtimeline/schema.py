@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
+from pydantic.json_schema import SkipJsonSchema
 
 
 class DocType(str, Enum):
@@ -32,6 +33,13 @@ class Sourced(BaseModel):
 
     confidence: float = Field(description="0 to 1. Below 0.7 means a human should check it.")
     source_text: str = Field(description="The text exactly as written on the page, including abbreviations.")
+    alternatives: list[str] = Field(
+        default_factory=list,
+        description="Only when unsure of a name or reading, or when the page gives a value without naming it: other "
+                    "likely names or readings, best first. Suggestions for the reviewer; never used on their own.",
+    )
+    # Set by the app when a reviewer picks a label; not part of what an extractor returns.
+    labelled_by_user: SkipJsonSchema[bool] = False
 
 
 class Encounter(BaseModel):
@@ -65,12 +73,18 @@ class Medication(Sourced):
     dose: Optional[str] = None
     frequency: Optional[str] = Field(None, description="As written, e.g. '1-0-1', 'BD', 'TDS'.")
     duration: Optional[str] = None
+    status: str = Field("prescribed", description="'prescribed', 'held' (hold, withhold, pause) or 'stopped' (stop, discontinue).")
+    duration_source: Optional[str] = Field(
+        None,
+        description="Where the duration is written when it is not in source_text, copied exactly from the page, "
+                    "e.g. a bracket '5days' covering several drugs or a closing 'x 1mth'.",
+    )
     route: Optional[str] = None
     instructions: Optional[str] = None
 
 
 class Investigation(Sourced):
-    name: str
+    name: str = Field(description="The test as named on the page. Empty when the page gives a value without naming it.")
     kind: str = Field("lab", description="'lab', 'imaging' (X-ray, CT, MRI, ultrasound) or 'study' (EEG, ECG, ...).")
     status: str = Field(description="'ordered' or 'resulted'.")
     value: Optional[str] = None
@@ -155,3 +169,4 @@ class ExtractionRecord(BaseModel):
     extraction: PageExtraction
     issues: list = Field(default_factory=list, description="verify.Issue entries from the deterministic checks.")
     grounding: str = Field("unchecked", description="What quotes were checked against: text_layer, transcription, none or unchecked.")
+    batch: int = Field(0, description="Which upload the page came in: 0 for the first build, then 1, 2, ... for pages added later.")

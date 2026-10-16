@@ -45,12 +45,18 @@ ABBREVIATIONS = {
     "eeg": "electroencephalogram", "ct": "ct", "mri": "mri", "sob": "breathlessness", "c/o": "complaints of",
     "h/o": "history of", "k/c/o": "known case of", "bp": "blood pressure", "pr": "pulse", "rr": "respiratory rate",
     "spo2": "oxygen saturation", "wt": "weight", "temp": "temperature",
+    "ida": "iron deficiency anaemia", "ccf": "heart failure",
 }
 NUMBER_WORDS = {w: i for i, w in enumerate(
     "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
     "sixteen seventeen eighteen nineteen twenty".split())}
 NEGATIONS = {"no", "not", "nil", "denies", "denied", "absent", "without", "neg", "negative"}
 STOP = {"of", "the", "and", "with", "for", "tab", "cap", "syp", "inj", "left", "right", "on", "in", "to", "mg", "ml"}
+
+
+# The field holding each section's name, which a reviewer can relabel.
+NAME_FIELDS = {"medications": "drug_as_written", "diagnoses": "text", "investigations": "name", "vitals": "name"}
+UNSURE = 0.7  # confidence below this is a reading a person should check
 
 
 class Issue(BaseModel):
@@ -138,8 +144,32 @@ def verify_page(x: PageExtraction, text_layer: Optional[str]) -> tuple[list[Issu
             issues.append(Issue(section=section, index=i, field="numbers",
                                 reason=f"number(s) {', '.join(sorted(missing))} not in the quoted text"))
 
+    for section in ("investigations", "vitals"):
+        for i, item in enumerate(getattr(x, section)):
+            if not item.name.strip() and not item.labelled_by_user:
+                issues.append(Issue(section=section, index=i, field="label", reason="the page gives this value without naming it"))
+    for section, name_field in NAME_FIELDS.items():
+        for i, item in enumerate(getattr(x, section)):
+            if item.alternatives and item.confidence < UNSURE and getattr(item, name_field).strip() and not item.labelled_by_user:
+                issues.append(Issue(section=section, index=i, field="reading", blocking=False,
+                                    reason="unsure reading; other likely readings are offered"))
     for i, m in enumerate(x.medications):
-        check_item("medications", i, m.source_text, m.drug_as_written, [m.strength, m.dose, m.duration])
+        check_item("medications", i, m.source_text, m.drug_as_written, [m.strength, m.dose])
+        if m.duration and page_text and quote_found(m.source_text, page_text):
+            # A duration can be written once for several drugs, so it may be backed by its own quote.
+            # A failure drops only the duration (see gate), not the drug.
+            backing = m.source_text
+            if m.duration_source:
+                if quote_found(m.duration_source, page_text):
+                    backing += " " + m.duration_source
+                else:
+                    issues.append(Issue(section="medications", index=i, field="duration", blocking=False,
+                                        reason="duration's quote not found on the page; duration dropped"))
+                    continue
+            missing = _numbers_backed([m.duration], backing)
+            if missing:
+                issues.append(Issue(section="medications", index=i, field="duration", blocking=False,
+                                    reason=f"duration number(s) {', '.join(sorted(missing))} not in the quoted text; duration dropped"))
     for i, d in enumerate(x.diagnoses):
         check_item("diagnoses", i, d.source_text, d.text, [])
     for i, t in enumerate(x.investigations):
@@ -192,6 +222,11 @@ def gate(x: PageExtraction, issues: list[Issue]) -> PageExtraction:
     for section, idxs in blocked.items():
         items = getattr(data, section)
         setattr(data, section, [item for i, item in enumerate(items) if i not in idxs])
+    for issue in issues:
+        if issue.section == "medications" and issue.field == "duration" and issue.index is not None \
+                and issue.index not in blocked.get("medications", set()):
+            kept = sum(1 for j in range(issue.index) if j not in blocked.get("medications", set()))
+            data.medications[kept].duration = None
     if any(i.blocking and i.section == "encounter" and i.field == "date_iso" for i in issues):
         data.encounter.date_iso = None  # fall back to the date as written
     return data

@@ -1,0 +1,1467 @@
+[
+ {
+  "page_id": "demo-01",
+  "source_file": "demo/gp-2024-01-18.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "GREENFIELD FAMILY CLINIC\nDate: 18/01/2024    OPD\nName: Meera Nair   Age/Sex: 46/F\nC/o increased frequency of urination and thirst x 2 months - ?DM. Tiredness.\nK/c/o HTN on Tab Amlodipine 5 mg OD.\nK/c/o epilepsy (seizure disorder) since age 12, on Tab Levetiracetam 500 mg BD.\nO/E: BP 136/84 mmHg. BMI 31.\nInv: HbA1c 8.6 %  FBS 172 mg/dl\nDiagnosis: Type 2 diabetes mellitus (new). Hypertension. Epilepsy.\nRx:\n1. Tab Metformin 500 mg 1-0-1 x 30 days\n2. Tab Amlodipine 5 mg 1-0-0 x 30 days\n3. Tab Levetiracetam 500 mg 1-0-1 x 30 days\nReview in 3 months.",
+   "doc_type": "case_sheet",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "18/01/2024",
+    "date_iso": "2024-01-18",
+    "date_ambiguous": false,
+    "facility": "Greenfield Family Clinic",
+    "clinician": null,
+    "department": null,
+    "encounter_type": "OPD"
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "frequent urination",
+    "thirst",
+    "tiredness"
+   ],
+   "history": null,
+   "episodes": [],
+   "negative_history": [],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Type 2 diabetes mellitus (new)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "K/c/o HTN on Tab Amlodipine 5 mg OD",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "K/c/o epilepsy (seizure disorder) since age 12",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Metformin 500 mg 1-0-1 x 30 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Metformin",
+     "generic_name": null,
+     "strength": "500 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "30 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Amlodipine 5 mg 1-0-0 x 30 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Amlodipine",
+     "generic_name": null,
+     "strength": "5 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-0",
+     "duration": "30 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Levetiracetam 500 mg 1-0-1 x 30 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Levetiracetam",
+     "generic_name": null,
+     "strength": "500 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "30 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "HbA1c 8.6 %",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "HbA1c",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "8.6",
+     "unit": "%",
+     "reference_range": null,
+     "abnormal": true
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "FBS 172 mg/dl",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Fasting blood sugar",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "172",
+     "unit": "mg/dl",
+     "reference_range": null,
+     "abnormal": true
+    }
+   ],
+   "vitals": [
+    {
+     "confidence": 0.93,
+     "source_text": "BP 136/84 mmHg",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "BP",
+     "value": "136/84",
+     "unit": "mmHg"
+    }
+   ],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "C/o increased frequency of urination and thirst x 2 months - ?DM",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "frequent urination",
+     "condition": "DM"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "C/o increased frequency of urination and thirst x 2 months - ?DM",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "thirst",
+     "condition": "DM"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": "2024-04-18",
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "text_layer",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-02",
+  "source_file": "demo/gp-2024-04-09.jpg",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "9/4/24\nc/o burning micturition x 3 days, increased frequency, fever 38.4 C\nBurning micturition, frequency, fever - ? UTI\nO/E: T 38.4 C. Suprapubic tenderness +. No renal angle tenderness.\nk/c/o DM, HTN, epilepsy - on Rx\nUrine routine: pus cells 20-25/hpf. Urine C/S sent.\nImp: Urinary tract infection\nRx: T. Nitrofurantoin 100 mg 1-0-1 x 5 days\n    T. Metformin 500 mg 1-0-1 - continue\n    T. Paracetamol 650 mg SOS\nAdv: plenty of oral fluids",
+   "doc_type": "case_sheet",
+   "script": "handwritten",
+   "encounter": {
+    "date_raw": "9/4/24",
+    "date_iso": "2024-04-09",
+    "date_ambiguous": false,
+    "facility": "Greenfield Family Clinic",
+    "clinician": null,
+    "department": null,
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "burning micturition",
+    "frequent urination",
+    "fever"
+   ],
+   "history": null,
+   "episodes": [],
+   "negative_history": [
+    "No renal angle tenderness"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Imp: Urinary tract infection",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Urinary tract infection",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN, epilepsy - on Rx",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN, epilepsy - on Rx",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN, epilepsy - on Rx",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "T. Nitrofurantoin 100 mg 1-0-1 x 5 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Nitrofurantoin",
+     "generic_name": null,
+     "strength": "100 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "5 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Metformin 500 mg 1-0-1 - continue",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Metformin",
+     "generic_name": null,
+     "strength": "500 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Paracetamol 650 mg SOS",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Paracetamol",
+     "generic_name": null,
+     "strength": "650 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "SOS",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "Urine routine: pus cells 20-25/hpf",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Urine routine",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "pus cells 20-25/hpf",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": true
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Urine C/S sent",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Urine culture",
+     "kind": "lab",
+     "status": "ordered",
+     "value": null,
+     "unit": null,
+     "reference_range": null,
+     "abnormal": null
+    }
+   ],
+   "vitals": [
+    {
+     "confidence": 0.93,
+     "source_text": "T 38.4 C",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Temperature",
+     "value": "38.4",
+     "unit": "C"
+    }
+   ],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Burning micturition, frequency, fever - ? UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "burning micturition",
+     "condition": "UTI"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Burning micturition, frequency, fever - ? UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "frequent urination",
+     "condition": "UTI"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Burning micturition, frequency, fever - ? UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "fever",
+     "condition": "UTI"
+    }
+   ],
+   "procedures": [],
+   "advice": [
+    "Plenty of oral fluids"
+   ],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "transcription",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-03",
+  "source_file": "demo/neuro-2024-06-12.jpg",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "Neurology OPD   12.06.2024\nk/c/o epilepsy on LEV 500 BD\n2 seizures since last visit - 1 GTCS during fever in April (~2 min), 1 brief focal aware episode in May\nNo missed doses. No head injury.\nk/c/o DM, HTN\nCNS: NAD\nImp: Epilepsy - breakthrough seizures\nRx: T. Levetiracetam 750 mg 1-0-1 x 3 months\nReview 6 months / SOS",
+   "doc_type": "case_sheet",
+   "script": "handwritten",
+   "encounter": {
+    "date_raw": "12.06.2024",
+    "date_iso": "2024-06-12",
+    "date_ambiguous": false,
+    "facility": "Neurology OPD",
+    "clinician": null,
+    "department": "Neurology",
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "seizures"
+   ],
+   "history": null,
+   "episodes": [
+    {
+     "confidence": 0.93,
+     "source_text": "2 seizures since last visit - 1 GTCS during fever in April (~2 min), 1 brief focal aware episode in May",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "symptom": "seizure",
+     "when_raw": "April",
+     "date_iso": "2024-04-01",
+     "date_precision": "month",
+     "count": 1,
+     "description": "Generalised tonic-clonic seizure during fever",
+     "duration": "about 2 minutes",
+     "severity_note": null,
+     "is_worst": false,
+     "triggers": [
+      "fever"
+     ]
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "2 seizures since last visit - 1 GTCS during fever in April (~2 min), 1 brief focal aware episode in May",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "symptom": "seizure",
+     "when_raw": "May",
+     "date_iso": "2024-05-01",
+     "date_precision": "month",
+     "count": 1,
+     "description": "Brief focal aware seizure",
+     "duration": null,
+     "severity_note": null,
+     "is_worst": false,
+     "triggers": []
+    }
+   ],
+   "negative_history": [
+    "No missed doses",
+    "No head injury"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Imp: Epilepsy - breakthrough seizures",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "T. Levetiracetam 750 mg 1-0-1 x 3 months",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Levetiracetam",
+     "generic_name": null,
+     "strength": "750 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "3 months",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [],
+   "vitals": [],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Imp: Epilepsy - breakthrough seizures",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "seizure",
+     "condition": "Epilepsy"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [
+   {
+    "section": "episodes",
+    "index": 0,
+    "field": "date_iso",
+    "reason": "date inferred from 'April'",
+    "blocking": false
+   },
+   {
+    "section": "episodes",
+    "index": 1,
+    "field": "date_iso",
+    "reason": "date inferred from 'May'",
+    "blocking": false
+   }
+  ],
+  "grounding": "transcription",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-04",
+  "source_file": "demo/gp-2024-08-27.jpg",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "27/08/24\nc/o burning micturition again x 2 days, frequency. No fever.\nBurning micturition, frequency - UTI (2nd episode)\nBP 152/96\nk/c/o DM, HTN, epilepsy\nImp: Urinary tract infection. HTN - not controlled.\nRx: T. Nitrofurantoin 100 mg 1-0-1 x 5 days\n    T. Amlodipine 10 mg 1-0-0 x 30 days (increased)\n    Continue other meds\nUrine C/S: E. coli, sensitive to nitrofurantoin",
+   "doc_type": "case_sheet",
+   "script": "handwritten",
+   "encounter": {
+    "date_raw": "27/08/24",
+    "date_iso": "2024-08-27",
+    "date_ambiguous": false,
+    "facility": "Greenfield Family Clinic",
+    "clinician": null,
+    "department": null,
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "burning micturition",
+    "frequent urination"
+   ],
+   "history": null,
+   "episodes": [],
+   "negative_history": [
+    "No fever"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Imp: Urinary tract infection. HTN - not controlled.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Urinary tract infection",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Imp: Urinary tract infection. HTN - not controlled.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN, epilepsy",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "k/c/o DM, HTN, epilepsy",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "T. Nitrofurantoin 100 mg 1-0-1 x 5 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Nitrofurantoin",
+     "generic_name": null,
+     "strength": "100 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "5 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Amlodipine 10 mg 1-0-0 x 30 days (increased)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Amlodipine",
+     "generic_name": null,
+     "strength": "10 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-0",
+     "duration": "30 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "Urine C/S: E. coli, sensitive to nitrofurantoin",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Urine culture",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "E. coli, sensitive to nitrofurantoin",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": true
+    }
+   ],
+   "vitals": [
+    {
+     "confidence": 0.93,
+     "source_text": "BP 152/96",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "BP",
+     "value": "152/96",
+     "unit": null
+    }
+   ],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Burning micturition, frequency - UTI (2nd episode)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "burning micturition",
+     "condition": "UTI"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Burning micturition, frequency - UTI (2nd episode)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "frequent urination",
+     "condition": "UTI"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "transcription",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-05",
+  "source_file": "demo/diabetes-2024-11-05.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "CITY DIABETES CENTRE - OPD\nDate: 05/11/2024\nComplaints: Passing urine frequently at night.\nHistory: Known type 2 diabetes since Jan 2024. Known hypertension, epilepsy.\nExamination: Foot examination normal. BP 134/82.\nInvestigations: HbA1c 7.6 %. Urine ACR 18 mg/g.\nDiagnosis: Type 2 diabetes mellitus - suboptimal control\nPlan: Tab Metformin 1000 mg 1-0-1 x 90 days",
+   "doc_type": "case_sheet",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "05/11/2024",
+    "date_iso": "2024-11-05",
+    "date_ambiguous": false,
+    "facility": "City Diabetes Centre",
+    "clinician": null,
+    "department": null,
+    "encounter_type": "OPD"
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "frequent urination"
+   ],
+   "history": null,
+   "episodes": [],
+   "negative_history": [
+    "Foot examination normal"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Diagnosis: Type 2 diabetes mellitus - suboptimal control",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Known hypertension, epilepsy.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Known hypertension, epilepsy.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Metformin 1000 mg 1-0-1 x 90 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Metformin",
+     "generic_name": null,
+     "strength": "1000 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "90 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "HbA1c 7.6 %",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "HbA1c",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "7.6",
+     "unit": "%",
+     "reference_range": null,
+     "abnormal": true
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Urine ACR 18 mg/g",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Urine albumin to creatinine ratio",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "18",
+     "unit": "mg/g",
+     "reference_range": null,
+     "abnormal": false
+    }
+   ],
+   "vitals": [
+    {
+     "confidence": 0.93,
+     "source_text": "BP 134/82",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "BP",
+     "value": "134/82",
+     "unit": null
+    }
+   ],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Complaints: Passing urine frequently at night.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "frequent urination",
+     "condition": "Type 2 diabetes mellitus"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [
+   {
+    "section": "links",
+    "index": 0,
+    "field": "condition",
+    "reason": "'Type 2 diabetes mellitus' is not in the quoted text",
+    "blocking": true
+   }
+  ],
+  "grounding": "text_layer",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-06",
+  "source_file": "demo/emergency-2025-01-22.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "CITY HOSPITAL - EMERGENCY DEPARTMENT\nDate: 22/01/2025  Time: 09:40\nPresenting complaint: Fever 39 C with chills since yesterday. Burning micturition. Generalised seizure at home this morning, approx 3 minutes, witnessed by husband. Worst seizure so far.\nFever with chills, burning micturition - UTI\nSeizure provoked by fever - epilepsy\nPMH: Type 2 DM, HTN, epilepsy.\nNo head injury. No missed doses. No neck stiffness.\nO/E: T 39.0 C, BP 128/80, drowsy, oriented after 1 hour. Right renal angle tenderness.\nLabs: RBS 248 mg/dl. Levetiracetam level 9 ug/ml (12-46). Urine C/S sent.\nDiagnosis: Urinary tract infection with fever. Breakthrough seizure.",
+   "doc_type": "discharge_summary",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "22/01/2025",
+    "date_iso": "2025-01-22",
+    "date_ambiguous": false,
+    "facility": "City Hospital Emergency",
+    "clinician": null,
+    "department": null,
+    "encounter_type": "Emergency"
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [
+    "fever",
+    "burning micturition",
+    "seizures"
+   ],
+   "history": null,
+   "episodes": [
+    {
+     "confidence": 0.93,
+     "source_text": "Generalised seizure at home this morning, approx 3 minutes, witnessed by husband. Worst seizure so far.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "symptom": "seizure",
+     "when_raw": "this morning",
+     "date_iso": "2025-01-22",
+     "date_precision": "day",
+     "count": 1,
+     "description": "Generalised seizure at home",
+     "duration": "about 3 minutes",
+     "severity_note": "Worst seizure so far",
+     "is_worst": true,
+     "triggers": [
+      "fever"
+     ]
+    }
+   ],
+   "negative_history": [
+    "No head injury",
+    "No missed doses",
+    "No neck stiffness"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Diagnosis: Urinary tract infection with fever. Breakthrough seizure.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Urinary tract infection",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "PMH: Type 2 DM, HTN, epilepsy.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "PMH: Type 2 DM, HTN, epilepsy.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Hypertension",
+     "known": true,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "PMH: Type 2 DM, HTN, epilepsy.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Epilepsy",
+     "known": true,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "RBS 248 mg/dl",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Random blood sugar",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "248",
+     "unit": "mg/dl",
+     "reference_range": null,
+     "abnormal": true
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Levetiracetam level 9 ug/ml (12-46)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Levetiracetam level",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "9",
+     "unit": "ug/ml",
+     "reference_range": "12-46",
+     "abnormal": true
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Urine C/S sent",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Urine culture",
+     "kind": "lab",
+     "status": "ordered",
+     "value": null,
+     "unit": null,
+     "reference_range": null,
+     "abnormal": null
+    }
+   ],
+   "vitals": [
+    {
+     "confidence": 0.93,
+     "source_text": "T 39.0 C",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Temperature",
+     "value": "39.0",
+     "unit": "C"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "BP 128/80",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "BP",
+     "value": "128/80",
+     "unit": null
+    }
+   ],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Fever with chills, burning micturition - UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "fever",
+     "condition": "UTI"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Fever with chills, burning micturition - UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "burning micturition",
+     "condition": "UTI"
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Seizure provoked by fever - epilepsy",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "seizure",
+     "condition": "epilepsy"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [
+   {
+    "section": "episodes",
+    "index": 0,
+    "field": "date_iso",
+    "reason": "date inferred from 'this morning'",
+    "blocking": false
+   }
+  ],
+  "grounding": "text_layer",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-07",
+  "source_file": "demo/emergency-2025-01-22-rx.jpg",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "22/1/25 ER\nCBC 11.2 ) 14800 ( 210000\nRx: T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI\n    T. Levetiracetam 750 mg 1-0-1 - continue\n    T. Paracetamol 650 mg SOS\n    T. Emeset 4 mg SOS\n    Hold Metformin till sugars reviewed\nDischarged after 8 hrs. Review with GP in 1 week.",
+   "doc_type": "prescription",
+   "script": "handwritten",
+   "encounter": {
+    "date_raw": "22/1/25",
+    "date_iso": "2025-01-22",
+    "date_ambiguous": false,
+    "facility": "City Hospital Emergency",
+    "clinician": null,
+    "department": null,
+    "encounter_type": "Emergency"
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [],
+   "history": null,
+   "episodes": [],
+   "negative_history": [],
+   "examination": null,
+   "diagnoses": [],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Cefuroxime",
+     "generic_name": null,
+     "strength": "500 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "7 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Levetiracetam 750 mg 1-0-1 - continue",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Levetiracetam",
+     "generic_name": null,
+     "strength": "750 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Paracetamol 650 mg SOS",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Paracetamol",
+     "generic_name": null,
+     "strength": "650 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "SOS",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.55,
+     "source_text": "T. Emeset 4 mg SOS",
+     "alternatives": [
+      "Emset"
+     ],
+     "labelled_by_user": false,
+     "drug_as_written": "Emeset",
+     "generic_name": null,
+     "strength": "4 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "SOS",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Hold Metformin till sugars reviewed",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Metformin",
+     "generic_name": null,
+     "strength": null,
+     "form": null,
+     "dose": null,
+     "frequency": null,
+     "duration": null,
+     "status": "held",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "T. Ciprofloxacin 500 mg 1-0-1 x 5 days",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Ciprofloxacin",
+     "generic_name": null,
+     "strength": "500 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": "5 days",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "CBC 11.2 ) 14800 ( 210000",
+     "alternatives": [
+      "Haemoglobin"
+     ],
+     "labelled_by_user": false,
+     "name": "",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "11.2",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "CBC 11.2 ) 14800 ( 210000",
+     "alternatives": [
+      "Total leucocyte count",
+      "Platelet count"
+     ],
+     "labelled_by_user": false,
+     "name": "",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "14800",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "CBC 11.2 ) 14800 ( 210000",
+     "alternatives": [
+      "Platelet count",
+      "Total leucocyte count"
+     ],
+     "labelled_by_user": false,
+     "name": "",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "210000",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": null
+    }
+   ],
+   "vitals": [],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "Cefuroxime",
+     "condition": "UTI"
+    }
+   ],
+   "procedures": [],
+   "advice": [
+    "Review with GP in 1 week"
+   ],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [
+   {
+    "section": "investigations",
+    "index": 0,
+    "field": "label",
+    "reason": "the page gives this value without naming it",
+    "blocking": true
+   },
+   {
+    "section": "investigations",
+    "index": 1,
+    "field": "label",
+    "reason": "the page gives this value without naming it",
+    "blocking": true
+   },
+   {
+    "section": "investigations",
+    "index": 2,
+    "field": "label",
+    "reason": "the page gives this value without naming it",
+    "blocking": true
+   },
+   {
+    "section": "medications",
+    "index": 3,
+    "field": "reading",
+    "reason": "unsure reading; other likely readings are offered",
+    "blocking": false
+   },
+   {
+    "section": "medications",
+    "index": 5,
+    "field": "source_text",
+    "reason": "quote not found on the page",
+    "blocking": true
+   }
+  ],
+  "grounding": "transcription",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-08",
+  "source_file": "demo/gp-2025-03-18.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "GREENFIELD FAMILY CLINIC\nDate: 18/03/2025\nReview after UTI. No urinary symptoms now.\n3 UTIs in the last 12 months.\nUSG KUB (15/03/2025): Both kidneys normal in size and echotexture. No calculi. Post-void residual negligible.\nDiagnosis: Recurrent urinary tract infection. Type 2 diabetes mellitus.\nRx: Tab Nitrofurantoin 50 mg 0-0-1 x 3 months - prophylaxis for recurrent UTI\n    Continue Metformin 1000 mg 1-0-1",
+   "doc_type": "case_sheet",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "18/03/2025",
+    "date_iso": "2025-03-18",
+    "date_ambiguous": false,
+    "facility": "Greenfield Family Clinic",
+    "clinician": null,
+    "department": null,
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera Nair",
+    "age": "46",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [],
+   "history": null,
+   "episodes": [],
+   "negative_history": [
+    "No urinary symptoms now"
+   ],
+   "examination": null,
+   "diagnoses": [
+    {
+     "confidence": 0.93,
+     "source_text": "Diagnosis: Recurrent urinary tract infection. Type 2 diabetes mellitus.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Recurrent urinary tract infection",
+     "known": false,
+     "icd10_suggestion": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Diagnosis: Recurrent urinary tract infection. Type 2 diabetes mellitus.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "text": "Type 2 diabetes mellitus",
+     "known": false,
+     "icd10_suggestion": null
+    }
+   ],
+   "medications": [
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Nitrofurantoin 50 mg 0-0-1 x 3 months - prophylaxis for recurrent UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Nitrofurantoin",
+     "generic_name": null,
+     "strength": "50 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "0-0-1",
+     "duration": "3 months",
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    },
+    {
+     "confidence": 0.93,
+     "source_text": "Continue Metformin 1000 mg 1-0-1",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "drug_as_written": "Metformin",
+     "generic_name": null,
+     "strength": "1000 mg",
+     "form": null,
+     "dose": null,
+     "frequency": "1-0-1",
+     "duration": null,
+     "status": "prescribed",
+     "duration_source": null,
+     "route": null,
+     "instructions": null
+    }
+   ],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "USG KUB (15/03/2025): Both kidneys normal in size and echotexture.",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "Ultrasound kidneys and bladder",
+     "kind": "imaging",
+     "status": "resulted",
+     "value": "Both kidneys normal in size and echotexture",
+     "unit": null,
+     "reference_range": null,
+     "abnormal": false
+    }
+   ],
+   "vitals": [],
+   "links": [
+    {
+     "confidence": 0.93,
+     "source_text": "Tab Nitrofurantoin 50 mg 0-0-1 x 3 months - prophylaxis for recurrent UTI",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "item": "Nitrofurantoin",
+     "condition": "recurrent UTI"
+    }
+   ],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "text_layer",
+  "batch": 0
+ },
+ {
+  "page_id": "demo-09",
+  "source_file": "demo/lab-2025-02-10.pdf",
+  "page_number": 1,
+  "extractor": "demo",
+  "extraction": {
+   "transcription": "SUNRISE DIAGNOSTICS\nName: Meera N.    Age/Sex: 64/F    Date: 10/02/2025\nThyroid profile: TSH 8.9 mIU/L (0.4-4.0)\nImpression: Raised TSH. Suggest clinical correlation.",
+   "doc_type": "lab_report",
+   "script": "typed",
+   "encounter": {
+    "date_raw": "10/02/2025",
+    "date_iso": "2025-02-10",
+    "date_ambiguous": false,
+    "facility": "Sunrise Diagnostics",
+    "clinician": null,
+    "department": null,
+    "encounter_type": null
+   },
+   "patient": {
+    "name": "Meera N.",
+    "age": "64",
+    "sex": "F",
+    "identifiers": []
+   },
+   "complaints": [],
+   "history": null,
+   "episodes": [],
+   "negative_history": [],
+   "examination": null,
+   "diagnoses": [],
+   "medications": [],
+   "investigations": [
+    {
+     "confidence": 0.93,
+     "source_text": "TSH 8.9 mIU/L (0.4-4.0)",
+     "alternatives": [],
+     "labelled_by_user": false,
+     "name": "TSH",
+     "kind": "lab",
+     "status": "resulted",
+     "value": "8.9",
+     "unit": "mIU/L",
+     "reference_range": "0.4-4.0",
+     "abnormal": true
+    }
+   ],
+   "vitals": [],
+   "links": [],
+   "procedures": [],
+   "advice": [],
+   "follow_up_date_iso": null,
+   "illegible_notes": []
+  },
+  "issues": [],
+  "grounding": "text_layer",
+  "batch": 0
+ }
+]

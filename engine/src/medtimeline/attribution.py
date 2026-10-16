@@ -85,7 +85,7 @@ def course_of(name: str, known: bool, dates: list[str]) -> str:
     """'long_term', 'acute' or 'unclassified', from the name and the recorded dates only."""
     if _any(ACUTE_TERMS, name) and not _any(["chronic", "recurrent"], name):
         return "acute"
-    if known or _any(LONG_TERM_TERMS, name):
+    if known or _any(LONG_TERM_TERMS, name) or _any(["chronic", "recurrent"], name):
         return "long_term"
     if len(dates) >= 2 and (date.fromisoformat(max(dates)) - date.fromisoformat(min(dates))).days >= 90:
         return "long_term"
@@ -117,4 +117,10 @@ def condition_for_drug(drug: str, conditions: list[str]) -> Optional[str]:
 def resolve(name: str, conditions: list[str]) -> Optional[str]:
     """Map a diagnosis as written in a link ('?UTI') to one of the history's condition names."""
     hits = [c for c in conditions if matches(name.strip("?! ."), c) or matches(c, name)]
-    return hits[0] if len(hits) == 1 else None
+    if len(hits) <= 1:
+        return hits[0] if hits else None
+    # Several fit ('recurrent UTI' fits 'UTI' and 'recurrent UTI'): take the one sharing most words, if unique.
+    # Score = shared words minus words the condition has that the link does not, so 'UTI' prefers plain UTI.
+    want = _expanded(name.strip("?! ."))
+    scored = sorted(((len(want & _expanded(c)) - len(_expanded(c) - want), c) for c in hits), reverse=True)
+    return scored[0][1] if scored[0][0] > scored[1][0] else None

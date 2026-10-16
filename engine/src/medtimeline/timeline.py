@@ -42,6 +42,15 @@ class EncounterNode(BaseModel):
     needs_review: int = 0
 
 
+class MedicationPeriod(BaseModel):
+    """When one prescription was in force."""
+
+    start: str
+    end: str
+    encounter_id: str
+    entry: Medication
+
+
 class MedicationCourse(BaseModel):
     drug: str
     start: Optional[str]
@@ -50,6 +59,7 @@ class MedicationCourse(BaseModel):
     entries: list[Medication]
     condition: Optional[str] = Field(None, description="The condition it treats, only if the page or the drug table settles it.")
     condition_basis: Optional[str] = Field(None, description="'page' (written on the page) or 'drug_table' (only one of the patient's conditions fits).")
+    periods: list[MedicationPeriod] = Field(default_factory=list, description="When it was in force; gaps mean it was not.")
 
 
 class Episode(BaseModel):
@@ -132,7 +142,7 @@ class LabSeries(BaseModel):
 
 
 class ReviewItem(BaseModel):
-    """An extracted item held out of the history because a check failed."""
+    """An extracted item held out of the history because a check failed, or kept with a caution."""
 
     page_id: str
     section: str
@@ -140,6 +150,12 @@ class ReviewItem(BaseModel):
     reason: str
     source_text: Optional[str]
     blocking: bool
+    key: Optional[str] = Field(None, description="page_id:section:index, used to save a reviewer's choice.")
+    reading: Optional[str] = Field(None, description="The name as read, if any.")
+    value: Optional[str] = None
+    options: list[str] = Field(default_factory=list, description="Likely labels, best first, for the reviewer to pick from.")
+    resolved: bool = False
+    choice: Optional[str] = Field(None, description="The label the reviewer picked; None with resolved=True means left unsure.")
 
 
 class PatientHistory(BaseModel):
@@ -168,21 +184,68 @@ def _review_count(items) -> int:
     return sum(1 for i in items if i.confidence < REVIEW_THRESHOLD)
 
 
-def build_history(records: list[ExtractionRecord]) -> PatientHistory:
-    """Assemble verified items into a history; failed items go to review_items instead."""
-    from medtimeline.verify import Issue, gate
+RELABELABLE = {"label", "name", "reading"}  # issue fields a reviewer's label settles
+UNLABELLED = "Unlabelled value"
 
+
+def review_key(page_id: str, section: str, index: int) -> str:
+    return f"{page_id}:{section}:{index}"
+
+
+def _options(issue, item) -> list[str]:
+    from medtimeline.verify import NAME_FIELDS
+
+    if item is None or issue.field not in RELABELABLE or issue.section not in NAME_FIELDS:
+        return []
+    read = getattr(item, NAME_FIELDS[issue.section], "") or ""
+    out = [read] if read.strip() else []
+    return out + [a for a in item.alternatives if a.strip() and a not in out]
+
+
+def build_history(records: list[ExtractionRecord], resolutions: Optional[dict[str, dict]] = None) -> PatientHistory:
+    """Assemble verified items into a history; failed items go to review_items instead.
+
+    `resolutions` holds reviewers' choices by review key: {"choice": "<label>"} relabels the item and lets it in,
+    marked as labelled by the user; {"choice": None} leaves it unsure. An unsure unnamed value is shown as
+    "Unlabelled value"; anything else left unsure stays out.
+    """
+    from medtimeline.verify import NAME_FIELDS, Issue, gate
+
+    resolutions = resolutions or {}
     review: list[ReviewItem] = []
     gated = []
     for rec in records:
         issues = [Issue.model_validate(i) for i in rec.issues]
-        for issue in issues:
-            items = getattr(rec.extraction, issue.section, None)
+        extraction = rec.extraction.model_copy(deep=True)
+        settled: set[int] = set()
+        for n, issue in enumerate(issues):
+            items = getattr(extraction, issue.section, None)
             item = items[issue.index] if isinstance(items, list) and issue.index is not None else None
             quote = getattr(item, "source_text", None) or (item if isinstance(item, str) else None)
-            review.append(ReviewItem(page_id=rec.page_id, section=issue.section, field=issue.field,
-                                     reason=issue.reason, source_text=quote, blocking=issue.blocking))
-        gated.append(rec.model_copy(update={"extraction": gate(rec.extraction, issues)}) if issues else rec)
+            key = review_key(rec.page_id, issue.section, issue.index) if issue.index is not None else None
+            options = _options(issue, item)
+            res = resolutions.get(key) if key and issue.field in RELABELABLE else None
+            entry = ReviewItem(page_id=rec.page_id, section=issue.section, field=issue.field, reason=issue.reason,
+                               source_text=quote, blocking=issue.blocking, key=key if options or res else None,
+                               reading=getattr(item, NAME_FIELDS.get(issue.section, ""), None) if item is not None else None,
+                               value=getattr(item, "value", None), options=options)
+            if res is not None:
+                entry.resolved, entry.choice = True, res.get("choice")
+                name_field = NAME_FIELDS[issue.section]
+                if entry.choice:
+                    setattr(item, name_field, entry.choice)
+                    item.labelled_by_user = True
+                    settled.add(n)
+                elif issue.field == "label":
+                    setattr(item, name_field, UNLABELLED)
+                    settled.add(n)
+                elif not issue.blocking:
+                    settled.add(n)
+            review.append(entry)
+        # A label settles every naming issue on that item; other failed checks still hold it out.
+        settled_items = {(issues[n].section, issues[n].index) for n in settled}
+        remaining = [i for i in issues if not ((i.section, i.index) in settled_items and i.field in RELABELABLE)]
+        gated.append(rec.model_copy(update={"extraction": gate(extraction, remaining) if remaining else extraction}))
     records = gated
 
     groups: dict[tuple, list[ExtractionRecord]] = defaultdict(list)
@@ -263,6 +326,44 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
     )
 
 
+SHORT_COURSE_DAYS = 14
+AS_NEEDED = {"SOS", "PRN", "STAT", "AS NEEDED", "WHEN REQUIRED"}
+
+
+def _periods(items: list[tuple["EncounterNode", Medication]]) -> list[MedicationPeriod]:
+    """When each prescription was in force.
+
+    A short written course (14 days or less) ends when the course does. An as-needed
+    or one-off order counts only on its visit day. Anything else is taken to run until
+    the drug is next written, and the last one until its written duration ends (or that day).
+    """
+    dated = sorted(((e, m) for e, m in items if e.date), key=lambda x: x[0].date)
+    out: list[MedicationPeriod] = []
+    for i, (enc, m) in enumerate(dated):
+        if m.status != "prescribed":
+            # Held or stopped: whatever was running ends that day, and nothing new starts.
+            if out and out[-1].end > enc.date:
+                out[-1].end = enc.date
+            continue
+        start = date.fromisoformat(enc.date)
+        days = normalize.duration_days(m.duration)
+        as_needed = (m.frequency or "").strip().upper() in AS_NEEDED
+        nxt = date.fromisoformat(dated[i + 1][0].date) if i + 1 < len(dated) else None
+        if as_needed:
+            end = start
+        elif days and days <= SHORT_COURSE_DAYS:
+            end = start + timedelta(days=days)
+        elif nxt:
+            end = max(nxt, start + timedelta(days=days or 0))
+        else:
+            end = start + timedelta(days=days or 0)
+        if out and out[-1].end >= start.isoformat() and out[-1].entry == m:
+            out[-1].end = max(out[-1].end, end.isoformat())  # same prescription repeated: one period
+        else:
+            out.append(MedicationPeriod(start=start.isoformat(), end=end.isoformat(), encounter_id=enc.id, entry=m))
+    return out
+
+
 def _linked_condition(enc: EncounterNode, item: str, conditions: list[str]) -> Optional[str]:
     """The condition a link on this visit's pages ties `item` to, if any."""
     for link in enc.links:
@@ -283,7 +384,8 @@ def _medication_courses(encounters: list[EncounterNode], conditions: list[str] =
     courses = []
     for drug, items in by_drug.items():
         dated = [(e, m) for e, m in items if e.date]
-        start = dated[0][0].date if dated else None
+        given = [(e, m) for e, m in dated if m.status == "prescribed"]
+        start = given[0][0].date if given else None
         end = None
         if dated:
             last_enc, last_med = dated[-1]
@@ -299,6 +401,11 @@ def _medication_courses(encounters: list[EncounterNode], conditions: list[str] =
             )
         )
         course = courses[-1]
+        course.periods = _periods(items)
+        if course.periods:
+            course.end = course.periods[-1].end
+        if dated and dated[-1][1].status != "prescribed":
+            course.end = dated[-1][0].date
         on_page = next((c for e, m in items if (c := _linked_condition(e, m.drug_as_written, list(conditions)))), None)
         if on_page:
             course.condition, course.condition_basis = on_page, "page"

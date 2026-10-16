@@ -6,7 +6,7 @@ Desktop tool that turns prescriptions and case sheets (PDF, DOC/DOCX, JPEG/PNG;
 typed or handwritten) into a chronological patient history.
 
 Status: **phase 0 spike**. The Python engine works end to end from the command
-line; the desktop app is not started. See [docs/v1-plan.md](docs/v1-plan.md).
+line, and the desktop app (app/) renders it; see [app/README.md](app/README.md). See [docs/v1-plan.md](docs/v1-plan.md).
 
 ## Layout
 
@@ -22,7 +22,7 @@ engine/   Python engine: ingest -> extract -> normalize -> assemble history
     details.py       what the detail panel shows for one selected episode or visit
     views.py         lenses (visits, symptoms, medications, both, conditions, labs) and sort orders
     evaluate.py      field-level scoring against hand-labelled gold pages
-app/      desktop app (Tauri + React), not started
+app/      desktop app (Tauri + React), built from the explorer design
 docs/     plan and design notes
 ```
 

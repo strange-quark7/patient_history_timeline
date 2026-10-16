@@ -1,0 +1,5 @@
+/target/
+/gen/schemas
+# Sidecar binaries are produced by the engine build, not committed.
+/binaries/*
+!/binaries/.gitkeep
