@@ -108,7 +108,7 @@ def visit_detail(history: PatientHistory, encounter_id: str) -> VisitDetail:
 
 class VisitFlag(BaseModel):
     kind: str = Field(description="'new_symptom', 'new_diagnosis', 'new_comorbidity', 'known_comorbidity', "
-                                  "'medication_change', 'abnormal_result' or 'emergency'.")
+                                  "'acute_illness', 'medication_change', 'abnormal_result' or 'emergency'.")
     text: str
 
 
@@ -123,9 +123,14 @@ def visit_flags(history: PatientHistory, encounter_id: str) -> list[VisitFlag]:
     for s in history.symptoms:
         if s.encounter_ids and s.encounter_ids[0] == visit.id:
             flags.append(VisitFlag(kind="new_symptom", text=s.name))
-    # A condition is only flagged at the first visit that records it; later visits already knew about it.
     for c in history.conditions:
-        if c.encounter_ids and c.encounter_ids[0] == visit.id:
+        if c.role == "acute":
+            # Every recurrence of an acute illness (each UTI) is flagged where it starts.
+            for n, ep in enumerate(c.episodes, start=1):
+                if ep.encounter_ids and ep.encounter_ids[0] == visit.id:
+                    flags.append(VisitFlag(kind="acute_illness", text=c.name + (f" (episode {n})" if len(c.episodes) > 1 else "")))
+        # A long-term condition is only flagged at the first visit that records it; later visits already knew about it.
+        elif c.encounter_ids and c.encounter_ids[0] == visit.id:
             if c.known_at_first_mention:
                 kind = "known_comorbidity"
             else:

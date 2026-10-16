@@ -161,6 +161,11 @@ def verify_page(x: PageExtraction, text_layer: Optional[str]) -> tuple[list[Issu
                 issues.append(Issue(section="episodes", index=i, field="date_iso", blocking=False,
                                     reason=f"date inferred from '{e.when_raw or 'nothing written'}'"))
 
+    for i, link in enumerate(x.links):
+        check_item("links", i, link.source_text, link.item, [])
+        if quote_found(link.source_text, page_text or "") and not name_in_quote(link.condition, link.source_text):
+            issues.append(Issue(section="links", index=i, field="condition", reason=f"'{link.condition}' is not in the quoted text"))
+
     enc = x.encounter
     if enc.date_raw and page_text and not quote_found(enc.date_raw, page_text):
         issues.append(Issue(section="encounter", index=None, field="date_raw", reason="visit date not found on the page"))

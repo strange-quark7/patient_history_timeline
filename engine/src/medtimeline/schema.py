@@ -100,6 +100,13 @@ class ReportedEpisode(Sourced):
     triggers: list[str] = Field(default_factory=list)
 
 
+class Link(Sourced):
+    """A tie the page itself makes between a complaint or drug and a diagnosis."""
+
+    item: str = Field(description="The complaint, episode symptom or drug, as written.")
+    condition: str = Field(description="The diagnosis the page ties it to, as written.")
+
+
 class PageExtraction(BaseModel):
     transcription: Optional[str] = Field(
         None,
@@ -124,6 +131,11 @@ class PageExtraction(BaseModel):
     medications: list[Medication] = Field(default_factory=list)
     investigations: list[Investigation] = Field(default_factory=list)
     vitals: list[Vital] = Field(default_factory=list)
+    links: list[Link] = Field(
+        default_factory=list,
+        description="Only ties the page itself makes, e.g. 'burning micturition - UTI', a drug written under a "
+                    "diagnosis heading, 'amlodipine for BP'. Never link from medical knowledge.",
+    )
     procedures: list[str] = Field(default_factory=list)
     advice: list[str] = Field(default_factory=list)
     follow_up_date_iso: Optional[str] = None

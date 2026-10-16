@@ -54,6 +54,7 @@ class Row(BaseModel):
         default_factory=list,
         description="For symptoms+medications: items of the other kind seen at the same visits.",
     )
+    conditions: list[str] = Field(default_factory=list, description="Conditions this row is tied to by the page or the drug table.")
 
 
 class View(BaseModel):
@@ -96,6 +97,7 @@ def _visit_rows(h: PatientHistory) -> list[Row]:
             label=" · ".join(x for x in [e.date or "Undated", e.facility, e.clinician] if x),
             first_seen=e.date, last_seen=e.date, visit_count=1, episode_count=1,
             events=[Event(date=e.date, encounter_id=e.id, detail=summary)],
+            conditions=[c.name for c in h.conditions if e.id in c.encounter_ids],
         ))
     return rows
 
@@ -105,7 +107,7 @@ def _symptom_rows(h: PatientHistory) -> list[Row]:
     return [
         Row(kind="symptom", label=s.name, first_seen=s.first_seen, last_seen=s.last_seen,
             visit_count=len(s.encounter_ids), episode_count=sum(e.count for e in s.episodes), episodes=s.episodes,
-            events=[Event(date=dates[i], encounter_id=i) for i in s.encounter_ids])
+            events=[Event(date=dates[i], encounter_id=i) for i in s.encounter_ids], conditions=s.conditions)
         for s in h.symptoms
     ]
 
@@ -115,7 +117,7 @@ def _condition_rows(h: PatientHistory) -> list[Row]:
     return [
         Row(kind="condition", label=c.name, first_seen=c.first_seen, last_seen=c.last_seen,
             visit_count=len(c.encounter_ids), episode_count=len(c.episodes), episodes=c.episodes,
-            events=[Event(date=dates[i], encounter_id=i) for i in c.encounter_ids])
+            events=[Event(date=dates[i], encounter_id=i) for i in c.encounter_ids], conditions=[c.name])
         for c in h.conditions
     ]
 
@@ -136,7 +138,7 @@ def _medication_rows(h: PatientHistory) -> list[Row]:
         label = c.entries[0].generic_name or c.entries[0].drug_as_written
         rows.append(Row(kind="medication", label=label, first_seen=c.start, last_seen=c.end,
                         visit_count=len(set(c.encounter_ids)), episode_count=len(episodes),
-                        episodes=episodes, events=events))
+                        episodes=episodes, events=events, conditions=[c.condition] if c.condition else []))
     return rows
 
 
@@ -171,8 +173,13 @@ def build_view(
     query: Optional[str] = None,
     start: Optional[str] = None,
     end: Optional[str] = None,
+    condition: Optional[str] = None,
 ) -> View:
-    """Rows for one lens, filtered by text and date range, in the chosen order."""
+    """Rows for one lens, filtered by text, date range and condition, in the chosen order.
+
+    With `condition`, only rows tied to that condition are kept. Unlinked
+    symptoms and drugs are left out of a condition's view rather than guessed into it.
+    """
     lens, sort = Lens(lens), SortBy(sort)
     if lens is Lens.visits:
         rows = _visit_rows(history)
@@ -192,6 +199,9 @@ def build_view(
     if query:
         q = query.lower()
         rows = [r for r in rows if q in r.label.lower() or any(q in x.lower() for x in r.related)]
+    if condition:
+        c = condition.lower()
+        rows = [r for r in rows if any(c == x.lower() for x in r.conditions)]
     if start or end:
         def in_range(r: Row) -> bool:
             return any(e.date and (not start or e.date >= start) and (not end or e.date <= end) for e in r.events)

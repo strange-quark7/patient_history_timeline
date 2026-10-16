@@ -26,6 +26,7 @@ Rules:
 - Set confidence honestly. Handwriting you are unsure of gets a low confidence; text you cannot read goes in illegible_notes, not into a guessed field.
 - Record each event the history describes (e.g. each seizure, each chest-pain attack) in episodes, separate from the visit. Use count when the page only gives a number ("3 episodes since last visit"). Mark is_worst only when the page says so.
 - Mark a diagnosis known when the page lists it as past history or a known case ("k/c/o hypertension") rather than diagnosing it at this visit.
+- A patient can have several unrelated conditions. Record a link only when the page itself ties a complaint, episode or drug to a diagnosis (an arrow or dash, a drug written under a diagnosis heading, "for BP"). Never link from medical knowledge.
 - Record pertinent negatives ("no fever", "denies head injury") in negative_history.
 - If the page has an embedded text layer, prefer it for typed text, but trust the image for handwriting and layout."""
 

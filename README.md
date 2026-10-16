@@ -95,6 +95,17 @@ Items that fail are not shown as facts. They are listed in `review_items` with t
 
 Limitation: on handwritten scans, the quote is checked against the same model's transcription. A local OCR pass as an independent second reader is planned for the offline version.
 
+## Several conditions at once
+
+A patient can have several unrelated conditions, for example diabetes, hypertension and epilepsy, plus a few UTIs. The rules in `engine/src/medtimeline/attribution.py` handle this without a model:
+
+- Each condition is its own track. A condition is long-term if it is past history or on a fixed list (diabetes, epilepsy and so on). It is acute if it is on a fixed list of usually self-limiting illnesses (UTI, chest infection and so on).
+- An acute condition recorded again after more than 28 days counts as a new episode. Each recurrence gets its own visit marker.
+- Long-term conditions diagnosed at the first visit that diagnosed any are primary; later ones are comorbidities. There can be more than one primary.
+- A symptom is tied to a condition per visit, and only when the page itself says so ("burning micturition - UTI"). Frequent urination can belong to diabetes at one visit and a UTI at another, and stays unlinked where the page is silent.
+- A drug is tied to a condition when the page says so, or when a fixed drug table allows exactly one of the patient's conditions. Pregabalin in a patient with both epilepsy and neuropathy stays unlinked.
+- `build_view(..., condition=...)` shows one condition's visits, symptoms and drugs. `correlate(..., symptom=..., condition=...)` compares one condition's drugs against one symptom's episodes, so UTIs are not counted against an epilepsy drug.
+
 ## Adding an extractor (e.g. a local model)
 
 Implement `extract(page: PageInput) -> PageExtraction`, decorate the class with

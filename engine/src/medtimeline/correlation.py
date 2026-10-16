@@ -2,6 +2,11 @@
 
 For each change, compare episodes in the window since the previous change with
 the window until the next one. This shows timing only, not cause.
+
+A patient with several conditions should be correlated one symptom or condition
+at a time: otherwise seizures and UTIs would be counted together against a
+diabetes drug. `condition` keeps only drugs tied to it; `symptom` picks the
+episodes. With `condition` alone, only episodes the page ties to it count.
 """
 
 from __future__ import annotations
@@ -35,11 +40,13 @@ class MedicationChange(BaseModel):
     after: Optional[Window]
 
 
-def medication_changes(history: PatientHistory) -> list[tuple[str, str, str, Optional[str], Optional[str], str]]:
+def medication_changes(history: PatientHistory, condition: Optional[str] = None) -> list[tuple[str, str, str, Optional[str], Optional[str], str]]:
     """(date, drug, kind, dose, previous dose, encounter id) for each start or strength change."""
     dates = {e.id: e.date for e in history.encounters}
     out = []
     for course in history.medication_courses:
+        if condition and course.condition != condition:
+            continue
         previous = None
         for enc_id, entry in zip(course.encounter_ids, course.entries):
             day = dates[enc_id]
@@ -54,11 +61,18 @@ def medication_changes(history: PatientHistory) -> list[tuple[str, str, str, Opt
     return sorted(out)
 
 
-def _episode_dates(history: PatientHistory) -> list[tuple[str, int, bool]]:
+def _episode_dates(history: PatientHistory, symptom: Optional[str] = None,
+                   condition: Optional[str] = None) -> list[tuple[str, int, bool]]:
     """(date, count, is_worst). Undated reports count just before the visit that recorded them."""
+    from medtimeline.timeline import _same_symptom
+
     dates = {e.id: e.date for e in history.encounters}
     out = []
     for ep in history.episodes:
+        if symptom and not _same_symptom(ep.symptom, symptom):
+            continue
+        if condition and not symptom and ep.condition != condition:
+            continue
         day = ep.date
         if not day:
             visit_day = dates.get(ep.reported_at)
@@ -82,9 +96,10 @@ def _window(eps: list[tuple[str, int, bool]], start: str, end: str) -> Optional[
     )
 
 
-def correlate(history: PatientHistory, until: Optional[str] = None) -> list[MedicationChange]:
-    eps = _episode_dates(history)
-    changes = medication_changes(history)
+def correlate(history: PatientHistory, until: Optional[str] = None, symptom: Optional[str] = None,
+              condition: Optional[str] = None) -> list[MedicationChange]:
+    eps = _episode_dates(history, symptom, condition)
+    changes = medication_changes(history, condition)
     all_days = sorted([d for d, _, _ in eps] + [e.date for e in history.encounters if e.date])
     if not all_days or not changes:
         return []

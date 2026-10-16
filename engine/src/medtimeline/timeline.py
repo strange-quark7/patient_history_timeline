@@ -15,7 +15,8 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from medtimeline import normalize
-from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Medication, ReportedEpisode, Vital
+from medtimeline import attribution
+from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Link, Medication, ReportedEpisode, Vital
 
 REVIEW_THRESHOLD = 0.7
 
@@ -37,6 +38,7 @@ class EncounterNode(BaseModel):
     advice: list[str] = Field(default_factory=list)
     negative_history: list[str] = Field(default_factory=list)
     reported_episodes: list[ReportedEpisode] = Field(default_factory=list)
+    links: list[Link] = Field(default_factory=list)
     needs_review: int = 0
 
 
@@ -46,6 +48,8 @@ class MedicationCourse(BaseModel):
     end: Optional[str]
     encounter_ids: list[str]
     entries: list[Medication]
+    condition: Optional[str] = Field(None, description="The condition it treats, only if the page or the drug table settles it.")
+    condition_basis: Optional[str] = Field(None, description="'page' (written on the page) or 'drug_table' (only one of the patient's conditions fits).")
 
 
 class Episode(BaseModel):
@@ -74,6 +78,7 @@ class EpisodeRecord(BaseModel):
     is_worst: bool
     triggers: list[str]
     reported_at: str = Field(description="Encounter id of the visit that recorded it.")
+    condition: Optional[str] = Field(None, description="Set only when the page ties this event to a diagnosis.")
     confidence: float
     source_text: str
 
@@ -84,8 +89,18 @@ class Condition(BaseModel):
     last_seen: Optional[str]
     encounter_ids: list[str]
     episodes: list[Episode] = Field(default_factory=list)
-    role: str = Field("primary", description="'primary' (the condition seen at most visits) or 'comorbidity'.")
+    course: str = Field("unclassified", description="'long_term', 'acute' (each recurrence is its own episode) or 'unclassified'.")
+    role: str = Field("primary", description="'primary' (long-term, recorded at the first visit that recorded any), "
+                                             "'comorbidity' (long-term, recorded later or as past history) or 'acute'.")
     known_at_first_mention: bool = Field(False, description="First recorded as past history, so it predates the records.")
+
+
+class Occurrence(BaseModel):
+    """A symptom at one visit, and the condition the page tied it to there, if any."""
+
+    encounter_id: str
+    date: Optional[str]
+    condition: Optional[str] = None
 
 
 class Symptom(BaseModel):
@@ -94,6 +109,14 @@ class Symptom(BaseModel):
     last_seen: Optional[str]
     encounter_ids: list[str]
     episodes: list[Episode] = Field(default_factory=list)
+    occurrences: list[Occurrence] = Field(
+        default_factory=list,
+        description="Per visit, because the same symptom can belong to different conditions at different visits.",
+    )
+
+    @property
+    def conditions(self) -> list[str]:
+        return list(dict.fromkeys(o.condition for o in self.occurrences if o.condition))
 
 
 class LabPoint(BaseModel):
@@ -199,6 +222,7 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
             node.advice += x.advice
             node.negative_history += x.negative_history
             node.reported_episodes += x.episodes
+            node.links += x.links
             node.clinician = node.clinician or x.encounter.clinician
             node.facility = node.facility or x.encounter.facility
             flagged = (
@@ -222,14 +246,16 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
         node.id = f"enc-{i}"
 
     distinct = sorted({n.lower() for n in names})
-    episodes = _episode_records(encounters)
+    conditions = _conditions(encounters)
+    condition_names = [c.name for c in conditions]
+    episodes = _episode_records(encounters, condition_names)
     return PatientHistory(
         patient_name=names[0] if names else None,
         patient_conflicts=distinct if len(distinct) > 1 else [],
         encounters=encounters,
-        medication_courses=_medication_courses(encounters),
-        conditions=_conditions(encounters),
-        symptoms=_symptoms(encounters, episodes),
+        medication_courses=_medication_courses(encounters, condition_names),
+        conditions=conditions,
+        symptoms=_symptoms(encounters, episodes, condition_names),
         episodes=episodes,
         lab_series=_lab_series(encounters),
         pages_needing_review=review_pages,
@@ -237,7 +263,17 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
     )
 
 
-def _medication_courses(encounters: list[EncounterNode]) -> list[MedicationCourse]:
+def _linked_condition(enc: EncounterNode, item: str, conditions: list[str]) -> Optional[str]:
+    """The condition a link on this visit's pages ties `item` to, if any."""
+    for link in enc.links:
+        if _same_symptom(link.item, item) or attribution.matches(item, link.item):
+            hit = attribution.resolve(link.condition, conditions)
+            if hit:
+                return hit
+    return None
+
+
+def _medication_courses(encounters: list[EncounterNode], conditions: list[str] = ()) -> list[MedicationCourse]:
     by_drug: dict[str, list[tuple[EncounterNode, Medication]]] = defaultdict(list)
     for enc in encounters:
         for med in enc.medications:
@@ -262,6 +298,12 @@ def _medication_courses(encounters: list[EncounterNode]) -> list[MedicationCours
                 entries=[m for _, m in items],
             )
         )
+        course = courses[-1]
+        on_page = next((c for e, m in items if (c := _linked_condition(e, m.drug_as_written, list(conditions)))), None)
+        if on_page:
+            course.condition, course.condition_basis = on_page, "page"
+        elif (by_table := attribution.condition_for_drug(drug, list(conditions))):
+            course.condition, course.condition_basis = by_table, "drug_table"
     return sorted(courses, key=lambda c: (c.start is None, c.start or "", c.drug))
 
 
@@ -291,23 +333,35 @@ def _span(mentions: list[tuple[Optional[str], str]]) -> tuple[Optional[str], Opt
 
 
 def _conditions(encounters: list[EncounterNode]) -> list[Condition]:
+    """Each condition is its own track; a patient can have several unrelated ones."""
     out = []
     for name, mentions in _mentions(encounters, lambda e: [d.text for d in e.diagnoses]).values():
         first, last = _span(mentions)
         enc_ids = [i for _, i in mentions]
         first_enc = next((e for e in encounters if e.id == enc_ids[0]), None)
         known = bool(first_enc) and any(d.known and _key(d.text) == _key(name) for d in first_enc.diagnoses)
-        out.append(Condition(name=name, first_seen=first, last_seen=last, encounter_ids=enc_ids,
-                             episodes=episodes_from(mentions), known_at_first_mention=known))
-    # The main condition is the one seen at the most visits (earliest wins a tie); the rest are comorbidities.
-    if out:
-        primary = min(out, key=lambda c: (-len(c.encounter_ids), c.first_seen or "9999"))
-        for c in out:
-            c.role = "primary" if c is primary else "comorbidity"
+        course = attribution.course_of(name, known, [d for d, _ in mentions if d])
+        if course == "acute":
+            # Each recurrence (e.g. each UTI) is its own episode.
+            episodes = [Episode(start=run[0][0], end=run[-1][0], encounter_ids=[e for _, e in run])
+                        for run in attribution.acute_runs(mentions)]
+        else:
+            episodes = episodes_from(mentions)
+        out.append(Condition(name=name, first_seen=first, last_seen=last, encounter_ids=enc_ids, episodes=episodes,
+                             course=course, known_at_first_mention=known))
+    # Long-term conditions diagnosed at the first visit that diagnosed any are primary; later or
+    # past-history ones are comorbidities. There can be several primaries.
+    new_long = [c for c in out if c.course != "acute" and not c.known_at_first_mention and c.first_seen]
+    earliest = min((c.first_seen for c in new_long), default=None)
+    for c in out:
+        if c.course == "acute":
+            c.role = "acute"
+        else:
+            c.role = "primary" if earliest and c.first_seen == earliest and not c.known_at_first_mention else "comorbidity"
     return out
 
 
-def _episode_records(encounters: list[EncounterNode]) -> list[EpisodeRecord]:
+def _episode_records(encounters: list[EncounterNode], conditions: list[str] = ()) -> list[EpisodeRecord]:
     records = []
     for enc in encounters:
         for ep in enc.reported_episodes:
@@ -324,6 +378,7 @@ def _episode_records(encounters: list[EncounterNode]) -> list[EpisodeRecord]:
                 is_worst=ep.is_worst,
                 triggers=ep.triggers,
                 reported_at=enc.id,
+                condition=_linked_condition(enc, ep.symptom, list(conditions)),
                 confidence=ep.confidence,
                 source_text=ep.source_text,
             ))
@@ -340,7 +395,7 @@ def _same_symptom(a: str, b: str) -> bool:
     return a == b or (len(a) > 3 and a in b) or (len(b) > 3 and b in a) or SequenceMatcher(None, a, b).ratio() >= 0.8
 
 
-def _symptoms(encounters: list[EncounterNode], records: list[EpisodeRecord]) -> list[Symptom]:
+def _symptoms(encounters: list[EncounterNode], records: list[EpisodeRecord], conditions: list[str] = ()) -> list[Symptom]:
     """Reported events are the episodes when a symptom has any; otherwise each visit is one."""
     dates = {e.id: e.date for e in encounters}
     names = {_key(n): n for n, _ in _mentions(encounters, lambda e: e.complaints).values()}
@@ -360,6 +415,9 @@ def _symptoms(encounters: list[EncounterNode], records: list[EpisodeRecord]) -> 
             ]
         else:
             episodes = episodes_from(mentions)
+        by_id = {e.id: e for e in encounters}
+        occurrences = [Occurrence(encounter_id=i, date=dates[i], condition=_linked_condition(by_id[i], name, list(conditions)))
+                       for i in enc_ids]
         all_dates = sorted([d for d, _ in mentions if d] + [r.date or dates[r.reported_at] for r in reported if r.date or dates[r.reported_at]])
         out.append(Symptom(
             name=name,
@@ -367,6 +425,7 @@ def _symptoms(encounters: list[EncounterNode], records: list[EpisodeRecord]) -> 
             last_seen=all_dates[-1] if all_dates else None,
             encounter_ids=enc_ids,
             episodes=episodes,
+            occurrences=occurrences,
         ))
     return out
 
