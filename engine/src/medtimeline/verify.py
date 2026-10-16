@@ -54,6 +54,11 @@ NEGATIONS = {"no", "not", "nil", "denies", "denied", "absent", "without", "neg",
 STOP = {"of", "the", "and", "with", "for", "tab", "cap", "syp", "inj", "left", "right", "on", "in", "to", "mg", "ml"}
 
 
+# The field holding each section's name, which a reviewer can relabel.
+NAME_FIELDS = {"medications": "drug_as_written", "diagnoses": "text", "investigations": "name", "vitals": "name"}
+UNSURE = 0.7  # confidence below this is a reading a person should check
+
+
 class Issue(BaseModel):
     section: str  # e.g. "medications", "encounter"
     index: Optional[int]  # position in that list, None for single fields
@@ -139,6 +144,15 @@ def verify_page(x: PageExtraction, text_layer: Optional[str]) -> tuple[list[Issu
             issues.append(Issue(section=section, index=i, field="numbers",
                                 reason=f"number(s) {', '.join(sorted(missing))} not in the quoted text"))
 
+    for section in ("investigations", "vitals"):
+        for i, item in enumerate(getattr(x, section)):
+            if not item.name.strip() and not item.labelled_by_user:
+                issues.append(Issue(section=section, index=i, field="label", reason="the page gives this value without naming it"))
+    for section, name_field in NAME_FIELDS.items():
+        for i, item in enumerate(getattr(x, section)):
+            if item.alternatives and item.confidence < UNSURE and getattr(item, name_field).strip() and not item.labelled_by_user:
+                issues.append(Issue(section=section, index=i, field="reading", blocking=False,
+                                    reason="unsure reading; other likely readings are offered"))
     for i, m in enumerate(x.medications):
         check_item("medications", i, m.source_text, m.drug_as_written, [m.strength, m.dose])
         if m.duration and page_text and quote_found(m.source_text, page_text):

@@ -137,7 +137,10 @@ def visit_flags(history: PatientHistory, encounter_id: str) -> list[VisitFlag]:
             flags.append(VisitFlag(kind=kind, text=c.name))
     for day, drug, kind, dose, prev, enc_id in medication_changes(history):
         if enc_id == visit.id:
-            text = f"{drug} {kind}" + (f": {prev} to {dose}" if prev else (f", {dose}" if dose else ""))
+            if kind == "dose change":
+                text = f"{drug} dose change: {prev} to {dose}"
+            else:
+                text = f"{drug} {kind}" + (f", {dose}" if dose else "")
             flags.append(VisitFlag(kind="medication_change", text=text))
     for t in visit.investigations:
         if t.abnormal:

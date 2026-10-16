@@ -14,6 +14,13 @@ What it does:
   correlation views; condition filter and lanes; every visit, episode, symptom,
   drug, test and change opens a detail panel with its source quote and check
   result; a needs-review list of anything that failed the source check; dark mode.
+- Needs review offers the likely labels for a value the page does not name (such as
+  the "9.4 ) 4500 ( 307000" blood count shorthand) or a name the reader is unsure of.
+  Pick one, leave it unsure, or undo. Choices are saved per patient in
+  `resolutions.json`, and anything labelled this way is marked "chosen by you".
+- Drugs the page holds or stops end their bar on that day and show as a change.
+- One-page summary: an A4 sheet (timeline figure, conditions, current drugs,
+  episodes, latest results, recent visits) with "Print or save as PDF".
 
 Not done yet: patient data is stored unencrypted under `~/.medtimeline`
 (SQLCipher is planned); the engine is not yet frozen into a sidecar binary for
@@ -97,4 +104,5 @@ Engine lines that are not valid JSON are logged to stderr and ignored.
 
 **Engine methods:** `info`, `demo`, `projects.list`, `projects.open`
 (`project_id`), `projects.create` (`name`, `folder`, `extractor`, `api_key?`),
-`projects.rebuild` (`project_id`). Builds emit `progress` events.
+`projects.rebuild` (`project_id`), `review.resolve` (`project_id`, `key`, `choice` or
+`clear`). Builds emit `progress` events.

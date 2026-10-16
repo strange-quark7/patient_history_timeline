@@ -1,7 +1,8 @@
 """Write the demo patient (made-up data) as verified extraction records.
 
 The page text below stands in for what the reader transcribes; the extractions
-are what a good reader would return, plus two deliberate mistakes (a drug not on
+are what a good reader would return, an unlabelled blood count and an unsure reading
+with label choices for the reviewer, plus two deliberate mistakes (a drug not on
 the page, and a symptom link the page does not make) so the review list has
 something in it. Every item goes through the same verify checks as real pages.
 
@@ -29,8 +30,9 @@ def dx(text, quote, known=False):
     return src(text=text, known=known, source_text=quote)
 
 
-def test(name, quote, value=None, unit=None, abnormal=None, kind="lab", status="resulted", ref=None):
-    return src(name=name, kind=kind, status=status, value=value, unit=unit, abnormal=abnormal, reference_range=ref, source_text=quote)
+def test(name, quote, value=None, unit=None, abnormal=None, kind="lab", status="resulted", ref=None, alternatives=()):
+    return src(name=name, kind=kind, status=status, value=value, unit=unit, abnormal=abnormal, reference_range=ref,
+               source_text=quote, alternatives=list(alternatives))
 
 
 def link(item, condition, quote):
@@ -187,17 +189,27 @@ Diagnosis: Urinary tract infection with fever. Breakthrough seizure.""", {
         "vitals": [src(name="Temperature", value="39.0", unit="C", source_text="T 39.0 C"), src(name="BP", value="128/80", source_text="BP 128/80")],
     }),
     ("emergency-2025-01-22-rx.jpg", "handwritten", """22/1/25 ER
+CBC 11.2 ) 14800 ( 210000
 Rx: T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI
     T. Levetiracetam 750 mg 1-0-1 - continue
     T. Paracetamol 650 mg SOS
+    T. Emeset 4 mg SOS
+    Hold Metformin till sugars reviewed
 Discharged after 8 hrs. Review with GP in 1 week.""", {
         "doc_type": "prescription", "encounter": {"date_raw": "22/1/25", "date_iso": "2025-01-22", "facility": "City Hospital Emergency", "encounter_type": "Emergency"},
         "links": [link("Cefuroxime", "UTI", "T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI")],
         "medications": [med("Cefuroxime", "500 mg", "1-0-1", "T. Cefuroxime 500 mg 1-0-1 x 7 days - for UTI", "7 days"),
                         med("Levetiracetam", "750 mg", "1-0-1", "T. Levetiracetam 750 mg 1-0-1 - continue"),
                         med("Paracetamol", "650 mg", "SOS", "T. Paracetamol 650 mg SOS"),
+                        src(drug_as_written="Emeset", strength="4 mg", frequency="SOS", source_text="T. Emeset 4 mg SOS",
+                            confidence=0.55, alternatives=["Emset"]),
+                        src(drug_as_written="Metformin", status="held", source_text="Hold Metformin till sugars reviewed"),
                         # Deliberate mistake: not on the page.
                         med("Ciprofloxacin", "500 mg", "1-0-1", "T. Ciprofloxacin 500 mg 1-0-1 x 5 days", "5 days")],
+        # The shorthand blood count names none of its values, so the reader only offers likely labels.
+        "investigations": [test("", "CBC 11.2 ) 14800 ( 210000", "11.2", None, alternatives=["Haemoglobin"]),
+                           test("", "CBC 11.2 ) 14800 ( 210000", "14800", None, alternatives=["Total leucocyte count", "Platelet count"]),
+                           test("", "CBC 11.2 ) 14800 ( 210000", "210000", None, alternatives=["Platelet count", "Total leucocyte count"])],
         "advice": ["Review with GP in 1 week"],
     }),
     ("gp-2025-03-18.pdf", "typed", """GREENFIELD FAMILY CLINIC

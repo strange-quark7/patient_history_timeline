@@ -32,7 +32,8 @@ def test_demo_overlapping_symptom_and_held_out_items(demo):
     assert [o["condition_id"] for o in freq["occurrences"]] == [
         "type-2-diabetes-mellitus", "urinary-tract-infection", "urinary-tract-infection", None]
     blocking = [r for r in demo["review_items"] if r["blocking"]]
-    assert {(r["section"], r["field"]) for r in blocking} == {("links", "condition"), ("medications", "source_text")}
+    assert {(r["section"], r["field"]) for r in blocking} == {("links", "condition"), ("medications", "source_text"),
+                                                              ("investigations", "label")}
     assert not any(m["id"] == "ciprofloxacin" for m in demo["medications"])
 
 

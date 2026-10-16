@@ -15,7 +15,7 @@ export type Encounter = {
   id: string; date: string | null; date_status: string; facility: string | null; clinician: string | null;
   encounter_type: string | null; complaints: string[]; negative_history: string[]; advice: string[];
   diagnoses: { text: string; known: boolean }[]; vitals: { name: string; value: string; unit: string | null }[];
-  medications: { med_id: string; label: string; dose: string; duration: string | null }[];
+  medications: { med_id: string; label: string; dose: string; duration: string | null; status: MedStatus }[];
   condition_ids: string[]; flags: Flag[]; test_ids: string[]; episode_ids: string[];
   medications_at_time: Dose[]; pages: Page[]; needs_review: number;
 };
@@ -33,10 +33,12 @@ export type Symptom = {
   occurrences: { encounter_id: string; date: string | null; condition_id: string | null }[]; condition_ids: string[];
 };
 
+export type MedStatus = "prescribed" | "held" | "stopped";
+
 export type Medication = {
-  id: string; drug: string; label: string; start: string | null; end: string | null; current: boolean;
+  id: string; drug: string; label: string; start: string | null; end: string | null; current: boolean; status: MedStatus;
   condition_id: string | null; condition_basis: "page" | "drug_table" | null;
-  steps: { encounter_id: string; date: string | null; dose: string; duration: string | null; as_written: string; source_text: string }[];
+  steps: { encounter_id: string; date: string | null; dose: string; duration: string | null; status: MedStatus; as_written: string; source_text: string; labelled_by_user: boolean }[];
   periods: { start: string; end: string; encounter_id: string; dose: string }[];
 };
 
@@ -45,12 +47,19 @@ export type Change = { id: string; date: string; med_id: string; drug: string; k
 export type Test = {
   id: string; name: string; kind: string; status: string; value: string | null; unit: string | null; reference_range: string | null;
   abnormal: boolean | null; encounter_id: string; date: string | null; condition_id: string | null; source_text: string;
+  labelled_by_user: boolean;
 };
 
 export type Window = { start: string; end: string; episodes: number; worst_episodes: number; per_month: number };
 export type Correlated = { date: string; drug: string; kind: string; dose: string | null; previous_dose: string | null; encounter_id: string; before: Window | null; after: Window | null };
 
-export type ReviewItem = { page_id: string; section: string; field: string; reason: string; source_text: string | null; blocking: boolean; page: Page | null };
+export type ReviewItem = {
+  page_id: string; section: string; field: string; reason: string; source_text: string | null; blocking: boolean; page: Page | null;
+  /** Set when the reviewer can pick a label; `options` are the likely labels, best first. */
+  key: string | null; reading: string | null; value: string | null; options: string[];
+  /** resolved with choice null means "left unsure". */
+  resolved: boolean; choice: string | null;
+};
 
 export type Bundle = {
   patient: { name: string | null; conflicts: string[] };

@@ -26,8 +26,9 @@ def _dose(m) -> str:
     return " ".join(x for x in [m.strength, normalize.expand_frequency(m.frequency) or m.frequency] if x)
 
 
-def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistory] = None) -> dict:
-    h = history or build_history(records)
+def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistory] = None,
+                resolutions: Optional[dict[str, dict]] = None) -> dict:
+    h = history or build_history(records, resolutions)
     cond_id = {c.name: slug(c.name) for c in h.conditions}
     names = list(cond_id)
     pages = {r.page_id: {"page_id": r.page_id, "file": r.source_file.rsplit("/", 1)[-1], "page": r.page_number,
@@ -51,7 +52,8 @@ def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistor
             linked = _linked_condition(e, t.name, names)
             tests.append({"id": tid, "name": t.name, "kind": t.kind, "status": t.status, "value": t.value, "unit": t.unit,
                           "reference_range": t.reference_range, "abnormal": t.abnormal, "encounter_id": e.id, "date": e.date,
-                          "condition_id": cond_id.get(linked), "source_text": t.source_text})
+                          "condition_id": cond_id.get(linked), "source_text": t.source_text,
+                          "labelled_by_user": t.labelled_by_user})
             test_ids_by_enc.setdefault(e.id, []).append(tid)
 
     episodes = []
@@ -68,9 +70,11 @@ def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistor
     for c in h.medication_courses:
         mid = slug(c.drug)
         steps = [{"encounter_id": i, "date": enc_by_id[i].date, "dose": _dose(m), "duration": m.duration,
-                  "as_written": m.drug_as_written, "source_text": m.source_text} for i, m in zip(c.encounter_ids, c.entries)]
+                  "status": m.status, "as_written": m.drug_as_written, "source_text": m.source_text,
+                  "labelled_by_user": m.labelled_by_user} for i, m in zip(c.encounter_ids, c.entries)]
         meds.append({"id": mid, "drug": c.drug, "label": c.entries[0].generic_name or c.entries[0].drug_as_written,
-                     "start": c.start, "end": c.end, "current": bool(c.end and last_visit and c.end >= last_visit),
+                     "start": c.start, "end": c.end, "status": c.entries[-1].status,
+                     "current": bool(c.end and last_visit and c.end >= last_visit) and c.entries[-1].status == "prescribed",
                      "condition_id": cond_id.get(c.condition), "condition_basis": c.condition_basis, "steps": steps,
                      "periods": [{"start": p.start, "end": p.end, "encounter_id": p.encounter_id, "dose": _dose(p.entry)} for p in c.periods]})
 
@@ -89,7 +93,8 @@ def make_bundle(records: list[ExtractionRecord], history: Optional[PatientHistor
             "advice": e.advice, "diagnoses": [{"text": d.text, "known": d.known} for d in e.diagnoses],
             "vitals": [{"name": v.name, "value": v.value, "unit": v.unit} for v in e.vitals],
             "medications": [{"med_id": slug(normalize.normalize_drug_key(m.generic_name or m.drug_as_written) or m.drug_as_written),
-                             "label": m.generic_name or m.drug_as_written, "dose": _dose(m), "duration": m.duration} for m in e.medications],
+                             "label": m.generic_name or m.drug_as_written, "dose": _dose(m), "duration": m.duration,
+                             "status": m.status} for m in e.medications],
             "condition_ids": [cond_id[c.name] for c in h.conditions if e.id in c.encounter_ids],
             "flags": [f.model_dump() for f in visit_flags(h, e.id)],
             "test_ids": test_ids_by_enc.get(e.id, []),

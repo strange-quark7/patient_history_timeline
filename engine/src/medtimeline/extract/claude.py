@@ -23,6 +23,9 @@ Rules:
 - Transcribe only what is on the page. Never infer a diagnosis, drug or value that is not written.
 - A drug's source_text may span several lines when its dose or timing is written on the lines below its name.
 - When one duration covers several drugs (a bracket, or "x 1 month" after the list), copy that text into each drug's duration_source.
+- A drug the page holds or stops ("Hold Chemo (Lenalidomide)", "stop metformin") is still a medication, with status 'held' or 'stopped'.
+- When the page gives a value without naming it (e.g. the blood count shorthand "9.4 ) 4500 ( 307000"), leave the name empty and put the likely names in alternatives. Never put a name on the page that is not written there.
+- When unsure how to read a name, give your best reading and put other likely readings in alternatives.
 - Keep abbreviations as written in source_text (e.g. "T. Pan 40 1-0-0 x 5d"), and expand them in the structured fields when the meaning is clear.
 - Dates are DD/MM/YYYY unless the page clearly shows otherwise. Set date_ambiguous when day and month could be swapped or the year is missing.
 - Set confidence honestly. Handwriting you are unsure of gets a low confidence; text you cannot read goes in illegible_notes, not into a guessed field.

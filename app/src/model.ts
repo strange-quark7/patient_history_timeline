@@ -1,5 +1,5 @@
 // Pure display helpers: time scale, labels, filters. No clinical rules live here.
-import type { Bundle, Condition, Correlated, Encounter, Episode, Medication, Symptom, Test } from "./types";
+import type { Bundle, Condition, Correlated, Encounter, Episode, Medication, Symptom, Test, ReviewItem } from "./types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86_400_000;
@@ -107,5 +107,10 @@ export function verdict(c: Correlated): { text: string; tone: "info" | "warn" | 
   if (a > b * 1.15) return { text: "More episodes after", tone: "warn" };
   return { text: "Similar frequency", tone: "plain" };
 }
+
+/** Review items still waiting on a person: failed checks, and label choices not yet settled. */
+export const openReview = (items: ReviewItem[]) => items.filter((r) => !r.resolved && (r.blocking || r.key));
+
+export const CHANGE_MARK: Record<string, string> = { "first recorded": "+", "dose change": "↕", held: "‖", stopped: "×", resumed: "↺" };
 
 export const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);

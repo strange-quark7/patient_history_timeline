@@ -2,6 +2,7 @@
 
     <home>/projects/<id>/meta.json      name, source folder, extractor, dates
     <home>/projects/<id>/records/*.json  one verified extraction per page (also the cache)
+    <home>/projects/<id>/resolutions.json reviewers' label choices, by review key
 
 Not encrypted yet; the v1 plan moves this into SQLCipher before real patient data is used.
 """
@@ -64,3 +65,16 @@ class Store:
 
     def records(self, project_id: str) -> list[ExtractionRecord]:
         return [ExtractionRecord.model_validate_json(p.read_text()) for p in sorted(self.records_dir(project_id).glob("*.json"))]
+
+    def resolutions(self, project_id: str) -> dict[str, dict]:
+        path = self._dir(project_id) / "resolutions.json"
+        return json.loads(path.read_text()) if path.exists() else {}
+
+    def resolve(self, project_id: str, key: str, choice: Optional[str], clear: bool = False) -> None:
+        """Save a reviewer's choice (a label, or None for 'leave unsure'); clear=True undoes it."""
+        res = self.resolutions(project_id)
+        if clear:
+            res.pop(key, None)
+        else:
+            res[key] = {"choice": choice, "at": time.time()}
+        (self._dir(project_id) / "resolutions.json").write_text(json.dumps(res, indent=2))

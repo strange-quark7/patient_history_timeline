@@ -43,7 +43,7 @@ for (const theme of ["light", "dark"]) {
   await page.getByRole("heading", { level: 1 }).waitFor();
   const shot = (name) => page.screenshot({ path: `${out}${theme}-${name}.png`, fullPage: true });
   await shot("1-tree");
-  check(await page.getByRole("button", { name: /items? need review/ }).isVisible(), `${theme}: review button shows`);
+  check(await page.getByRole("button", { name: /items? to review/ }).isVisible(), `${theme}: review button shows`);
 
   if (theme === "light") {
     check((await page.locator(".lane").count()) === 5, "five condition lanes");
@@ -52,9 +52,28 @@ for (const theme of ["light", "dark"]) {
     await shot("2-uti-filter");
     await page.getByRole("button", { name: "All conditions" }).click();
 
-    await page.getByRole("button", { name: /items? need review/ }).click();
+    await page.getByRole("button", { name: /items? to review/ }).click();
     check(await page.getByText("quote not found on the page", { exact: false }).isVisible(), "held-out drug listed with reason");
+    check((await page.getByText(/Needs a label/).count()) === 3, "three unnamed values offer labels");
     await shot("3-review");
+    const reviewCount = async () => Number((await page.getByRole("button", { name: /items? to review/ }).textContent()).match(/\d+/)[0]);
+    const before = await reviewCount();
+    await page.getByRole("group", { name: "Label choices" }).first().getByRole("button", { name: "Haemoglobin" }).click();
+    await page.getByText('Labelled "Haemoglobin"').waitFor();
+    check(await reviewCount() === before - 1, "picking a label settles the item");
+    await page.getByRole("group", { name: "Label choices" }).first().getByRole("button", { name: "Leave unsure" }).click();
+    await page.getByText("Left unlabelled").waitFor();
+    await shot("3b-review-settled");
+    await page.getByRole("button", { name: "Labs and scans", exact: true }).click();
+    await page.getByRole("button", { name: /Haemoglobin/ }).first().click();
+    check(await page.getByText("Label chosen by you").isVisible(), "labelled value is on the timeline, marked as chosen");
+    await page.getByRole("button", { name: /items? to review/ }).click();
+    await page.getByRole("group", { name: "Label choices" }).filter({ hasText: "Undo" }).last().getByRole("button", { name: "Undo" }).click();
+    await page.getByText("Left unlabelled").waitFor({ state: "detached" });
+    check(await reviewCount() === before - 1, "undo reopens the item");
+    await page.getByRole("button", { name: "Visit tree", exact: true }).click();
+    await page.getByRole("button", { name: "Visit 22 Jan 2025", exact: true }).dispatchEvent("click"); // the worst-seizure dot sits on top of this tick
+    check(await page.getByText("Held or stopped at this visit").isVisible(), "held drug listed at its visit");
 
     for (const [tab, name] of [["Symptoms", "4-symptoms"], ["Episodes", "5-episodes"], ["Medications", "6-meds"], ["Labs and scans", "7-tests"]]) {
       await page.getByRole("button", { name: tab, exact: true }).click();
@@ -76,9 +95,28 @@ for (const theme of ["light", "dark"]) {
     await page.getByRole("button", { name: /worst reported/ }).first().click();
     check(await page.getByText("Medication at the time").isVisible(), "worst episode detail");
     await shot("10-worst-episode");
+
+    await page.getByRole("button", { name: "One-page summary" }).click();
+    await page.getByRole("article", { name: "One-page summary" }).waitFor();
+    check(await page.getByText("Held, stopped").isVisible(), "summary marks the metformin hold");
+    await shot("11-summary");
+    await page.emulateMedia({ media: "print" });
+    await page.pdf({ path: `${out}summary.pdf`, format: "A4", printBackground: true });
+    const pdfPages = (await import("node:fs")).readFileSync(`${out}summary.pdf`, "latin1").match(/\/Type\s*\/Page[^s]/g)?.length;
+    check(pdfPages === 1, `summary prints on one A4 page (${pdfPages})`);
+    await page.setViewportSize({ width: 703, height: 1031 }); // A4 less 12 mm margins, at 96 dpi
+    await page.screenshot({ path: `${out}${theme}-12-summary-print.png`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.emulateMedia({ media: "screen" });
+    await page.getByRole("button", { name: "← Back to the timeline" }).click();
+    check(await page.getByText("Medication at the time").isVisible(), "back from the summary keeps the selection");
   } else {
     await page.getByRole("button", { name: "Correlation", exact: true }).click();
     await shot("2-correlation");
+    await page.getByRole("button", { name: /items? to review/ }).click();
+    await shot("3-review");
+    await page.getByRole("button", { name: "One-page summary" }).click();
+    await shot("4-summary");
   }
   await page.close();
 }

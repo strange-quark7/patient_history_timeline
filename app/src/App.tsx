@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Explorer } from "./components/Explorer";
+import { Summary } from "./components/Summary";
 import { call, isDesktop, onEngineEvent, pickFolder } from "./engine";
 import type { Opened, Project } from "./types";
 
@@ -27,6 +28,7 @@ export default function App() {
   const [opened, setOpened] = useState<Opened | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState(false);
 
   const open = async (method: string, params: Record<string, unknown> = {}) => {
     setBusy(true);
@@ -41,7 +43,18 @@ export default function App() {
   };
 
   if (opened) {
-    return <Explorer key={opened.project.id} bundle={opened.bundle} title={opened.project.name} onBack={() => setOpened(null)} dark={dark} onTheme={toggleTheme} />;
+    const resolve = async (key: string, choice: string | null | undefined) => {
+      const params = choice === undefined ? { project_id: opened.project.id, key, clear: true } : { project_id: opened.project.id, key, choice };
+      setOpened(await call<Opened>("review.resolve", params));
+    };
+    // The explorer stays mounted under the summary so its selection and view survive the round trip.
+    return (<>
+      {summary && <Summary bundle={opened.bundle} title={opened.project.name} onBack={() => setSummary(false)} />}
+      <div hidden={summary}>
+        <Explorer key={opened.project.id} bundle={opened.bundle} title={opened.project.name} onBack={() => { setSummary(false); setOpened(null); }}
+          dark={dark} onTheme={toggleTheme} onResolve={resolve} onSummary={() => setSummary(true)} />
+      </div>
+    </>);
   }
   return <Home open={open} busy={busy} error={error} setError={setError} />;
 }

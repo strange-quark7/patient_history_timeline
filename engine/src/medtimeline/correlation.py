@@ -32,7 +32,7 @@ class Window(BaseModel):
 class MedicationChange(BaseModel):
     date: str
     drug: str
-    kind: str  # "first recorded" (the records cannot tell a new start from an old drug) or "dose change"
+    kind: str  # "first recorded" (the records cannot tell a new start from an old drug), "dose change", "held", "stopped" or "resumed"
     dose: Optional[str]
     previous_dose: Optional[str]
     encounter_id: str
@@ -41,22 +41,29 @@ class MedicationChange(BaseModel):
 
 
 def medication_changes(history: PatientHistory, condition: Optional[str] = None) -> list[tuple[str, str, str, Optional[str], Optional[str], str]]:
-    """(date, drug, kind, dose, previous dose, encounter id) for each start or strength change."""
+    """(date, drug, kind, dose, previous dose, encounter id) for each first record, dose change, hold, stop or resumption."""
     dates = {e.id: e.date for e in history.encounters}
     out = []
     for course in history.medication_courses:
         if condition and course.condition != condition:
             continue
-        previous = None
+        previous, paused = None, False
         for enc_id, entry in zip(course.encounter_ids, course.entries):
             day = dates[enc_id]
             if not day:
                 continue
             dose = " ".join(x for x in [entry.strength, entry.frequency] if x) or None
-            if previous is None:
+            if entry.status != "prescribed":
+                out.append((day, course.drug, entry.status, None, previous, enc_id))
+                paused = True
+                continue
+            if previous is None and not paused:
                 out.append((day, course.drug, "first recorded", dose, None, enc_id))
+            elif paused:
+                out.append((day, course.drug, "resumed", dose, previous, enc_id))
             elif dose and dose != previous:
                 out.append((day, course.drug, "dose change", dose, previous, enc_id))
+            paused = False
             previous = dose or previous
     return sorted(out)
 

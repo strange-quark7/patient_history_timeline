@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
-import { Index, detailFor, type Detail, type Sel } from "../details";
-import { FLAG_TYPES, cap, episodeWhen, fmtDate, makeFilter, makeScale, pct, roleText, verdict, type FlagType } from "../model";
+import { Index, detailFor, type Choices, type Detail, type Sel } from "../details";
+import { CHANGE_MARK, FLAG_TYPES, cap, episodeWhen, fmtDate, makeFilter, makeScale, openReview, pct, roleText, verdict, type FlagType } from "../model";
 import type { Bundle, Encounter } from "../types";
 
 type Lens = "tree" | "symptoms" | "episodes" | "meds" | "tests" | "corr";
@@ -19,7 +19,12 @@ const swatch = (f: FlagType | undefined, w: number, h: number): CSSProperties =>
   ...(f && "hollow" in f ? { background: "transparent", border: `2px solid ${f.color}` } : { background: f?.color }),
 });
 
-export function Explorer({ bundle, title, onBack, dark, onTheme }: { bundle: Bundle; title: string; onBack: () => void; dark: boolean; onTheme: () => void }) {
+/** Save a review choice: a label, null to leave it unsure, or undefined to undo. */
+export type Resolve = (key: string, choice: string | null | undefined) => Promise<void>;
+
+export function Explorer({ bundle, title, onBack, dark, onTheme, onResolve, onSummary }: {
+  bundle: Bundle; title: string; onBack: () => void; dark: boolean; onTheme: () => void; onResolve: Resolve; onSummary: () => void;
+}) {
   const ix = useMemo(() => new Index(bundle), [bundle]);
   const scale = useMemo(() => makeScale(bundle), [bundle]);
   const firstSel: Sel = bundle.episodes.find((e) => e.is_worst) ? { kind: "episode", id: bundle.episodes.find((e) => e.is_worst)!.id }
@@ -34,7 +39,7 @@ export function Explorer({ bundle, title, onBack, dark, onTheme }: { bundle: Bun
   const isSel = (k: Sel["kind"], id: string) => sel.kind === k && sel.id === id;
   const detail: Detail = useMemo(() => detailFor(ix, sel, cond), [ix, sel, cond]);
 
-  const blocking = bundle.review_items.filter((r) => r.blocking).length;
+  const blocking = openReview(bundle.review_items).length;
   const name = bundle.patient.name ?? title;
   const epCount = bundle.episodes.reduce((a, e) => a + e.count, 0);
   const summary = [
@@ -58,7 +63,7 @@ export function Explorer({ bundle, title, onBack, dark, onTheme }: { bundle: Bun
           {blocking > 0 && (
             <div><button className={`review${sel.kind === "review" ? " on" : ""}`} onClick={pick({ kind: "review", id: "all" })}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l9.5 17h-19z" /><path d="M12 10v4M12 17.5v.5" /></svg>
-              {blocking} item{blocking === 1 ? "" : "s"} need review
+              {blocking} item{blocking === 1 ? "" : "s"} to review
             </button></div>
           )}
         </div>
@@ -68,6 +73,7 @@ export function Explorer({ bundle, title, onBack, dark, onTheme }: { bundle: Bun
               <button key={id} className={`tab${lens === id ? " on" : ""}`} onClick={() => { setLens(id); setSort(SORTS[id][0]?.[0] ?? "asc"); if (id === "corr" && sel.kind !== "change") { const first = bundle.changes.find((c) => f.med(ix.med(c.med_id)!)); if (first) setSel({ kind: "change", id: first.id }); } }}>{label}</button>
             ))}
           </nav>
+          <button className="btn" onClick={onSummary}>One-page summary</button>
           <button className="theme" aria-label={dark ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={dark} onClick={onTheme}>
             {dark ? <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
               : <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>}
@@ -170,7 +176,7 @@ export function Explorer({ bundle, title, onBack, dark, onTheme }: { bundle: Bun
         {lens !== "corr" && (
           <ListPanel bundle={bundle} ix={ix} lens={lens} sort={sort} setSort={setSort} cond={cond} flag={flag} isSel={isSel} pick={pick} />
         )}
-        <DetailPanel detail={detail} setSel={setSel} />
+        <DetailPanel detail={detail} setSel={setSel} onResolve={onResolve} />
       </div>
     </div>
   );
@@ -317,7 +323,7 @@ function Correlation({ bundle, ix, scale, cond, sel, setSel }: { bundle: Bundle;
             <div style={{ position: "relative", flex: "1 1 auto", height: 36 }}>
               {[...chips].map(([d, rs]) => {
                 const id = changeId(d, rs[0].drug)!;
-                const text = rs.map((r) => `${ix.medLabel(rs.length > 2 ? r.drug : r.drug).slice(0, rs.length > 1 ? 4 : 12)}${r.kind === "dose change" ? " ↕" : " +"}`).join(" ");
+                const text = rs.map((r) => `${ix.medLabel(rs.length > 2 ? r.drug : r.drug).slice(0, rs.length > 1 ? 4 : 12)} ${CHANGE_MARK[r.kind] ?? "•"}`).join(" ");
                 return <button key={d} className={`chip${sel.kind === "change" && rs.some((r) => sel.id === changeId(d, r.drug)) ? " sel" : ""}`} style={scale.x(d) > 0.9 ? { left: "auto", right: 0, transform: "none" } : scale.x(d) < 0.06 ? { left: 0, transform: "none" } : { left: pct(scale.x(d)) }} title={rs.map((r) => `${ix.medLabel(r.drug)} ${r.kind}${r.dose ? `, ${r.dose}` : ""}`).join("; ")} onClick={() => setSel({ kind: "change", id })}>{text}</button>;
               })}
             </div>
@@ -379,7 +385,7 @@ function Correlation({ bundle, ix, scale, cond, sel, setSel }: { bundle: Bundle;
             return (
               <button key={id} className={`card${sel.kind === "change" && sel.id === id ? " sel" : ""}`} onClick={() => setSel({ kind: "change", id })}>
                 <span className="mono muted" style={{ fontSize: 12 }}>{fmtDate(r.date)}</span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{ix.medLabel(r.drug)} {r.kind}{r.previous_dose ? `: ${r.previous_dose} to ${r.dose}` : r.dose ? `, ${r.dose}` : ""}</span>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{ix.medLabel(r.drug)} {r.kind}{r.kind === "dose change" ? `: ${r.previous_dose} to ${r.dose}` : r.dose ? `, ${r.dose}` : ""}</span>
                 <span style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: 14 }}>
                   <span className="muted">Episodes / month</span>
                   <span className="mono">{r.before ? r.before.per_month.toFixed(1) : "–"} → {r.after ? r.after.per_month.toFixed(1) : "?"}</span>
@@ -396,7 +402,27 @@ function Correlation({ bundle, ix, scale, cond, sel, setSel }: { bundle: Bundle;
   );
 }
 
-function DetailPanel({ detail, setSel }: { detail: Detail; setSel: (s: Sel) => void }) {
+function ChoiceButtons({ c, onResolve }: { c: Choices; onResolve: Resolve }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const run = (choice: string | null | undefined) => async () => {
+    setBusy(true); setErr(null);
+    try { await onResolve(c.key, choice); } catch (e) { setErr(String((e as Error).message ?? e)); } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div role="group" aria-label="Label choices" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {c.resolved ? <button className="btn" disabled={busy} onClick={run(undefined)}>Undo</button> : (<>
+          {c.options.map((o) => <button key={o} className="btn" disabled={busy} onClick={run(o)}>{o}</button>)}
+          <button className="btn quiet" disabled={busy} onClick={run(null)}>Leave unsure</button>
+        </>)}
+      </div>
+      {err && <div className="error">{err}</div>}
+    </div>
+  );
+}
+
+function DetailPanel({ detail, setSel, onResolve }: { detail: Detail; setSel: (s: Sel) => void; onResolve: Resolve }) {
   const color = (tone?: string) => (tone === "severe" ? "var(--severe-ink)" : tone === "warn" ? "var(--warn-ink)" : "var(--ink)");
   return (
     <section aria-label="Details" className="panel" style={{ flex: "999 1 560px", minWidth: 0, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -416,7 +442,8 @@ function DetailPanel({ detail, setSel }: { detail: Detail; setSel: (s: Sel) => v
               <div key={j} style={{ display: "flex", flexDirection: "column", gap: 2, ...(r.flagColor ? { borderLeft: `4px ${r.hollow ? "double" : "solid"} ${r.flagColor}`, paddingLeft: 8 } : {}) }}>
                 {r.label && <span className="muted" style={{ fontSize: 13 }}>{r.label}</span>}
                 {r.link ? <button className="linkrow" onClick={() => setSel(r.link!)}>{r.value}</button>
-                  : <span style={{ fontSize: 15, lineHeight: 1.45, color: color(r.tone) }}>{r.value}</span>}
+                  : r.value ? <span style={{ fontSize: 15, lineHeight: 1.45, color: color(r.tone) }}>{r.value}</span> : null}
+                {r.choices && <ChoiceButtons c={r.choices} onResolve={onResolve} />}
               </div>
             ))}
           </div>

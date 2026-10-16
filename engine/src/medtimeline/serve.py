@@ -38,19 +38,33 @@ class Service:
     def __init__(self, home: Optional[str] = None, emit: Emit = lambda e, d: None):
         self.store = Store(home)
         self.emit = emit
+        self.demo_resolutions: dict[str, dict] = {}  # the demo is not saved; its choices last for this session
 
     def info(self) -> dict:
         return {"extractors": available_extractors(), "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
     def demo(self) -> dict:
-        return {"project": {"id": "demo", "name": "Demo patient (made-up data)"}, "bundle": make_bundle(demo_records())}
+        return {"project": {"id": "demo", "name": "Demo patient (made-up data)"},
+                "bundle": make_bundle(demo_records(), resolutions=self.demo_resolutions)}
 
     def projects_list(self) -> list[dict]:
         return self.store.list()
 
     def projects_open(self, project_id: str) -> dict:
         records = self.store.records(project_id)
-        return {"project": {"id": project_id, **self.store.meta(project_id)}, "bundle": make_bundle(records)}
+        return {"project": {"id": project_id, **self.store.meta(project_id)},
+                "bundle": make_bundle(records, resolutions=self.store.resolutions(project_id))}
+
+    def review_resolve(self, project_id: str, key: str, choice: Optional[str] = None, clear: bool = False) -> dict:
+        """Pick a label for a review item (choice), leave it unsure (choice None), or undo (clear). Returns the new bundle."""
+        if project_id == "demo":
+            if clear:
+                self.demo_resolutions.pop(key, None)
+            else:
+                self.demo_resolutions[key] = {"choice": choice}
+            return self.demo()
+        self.store.resolve(project_id, key, choice, clear)
+        return self.projects_open(project_id)
 
     def projects_create(self, name: str, folder: str, extractor: str = "claude", api_key: Optional[str] = None,
                         model: Optional[str] = None) -> dict:
@@ -75,7 +89,7 @@ class Service:
 
     METHODS = {
         "info": "info", "demo": "demo", "projects.list": "projects_list", "projects.open": "projects_open",
-        "projects.create": "projects_create", "projects.rebuild": "projects_rebuild",
+        "projects.create": "projects_create", "projects.rebuild": "projects_rebuild", "review.resolve": "review_resolve",
     }
 
     def call(self, method: str, params: Optional[dict]) -> object:
