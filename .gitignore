@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+# Never commit real patient documents or extractions
+samples/
+cache/
+*.history.json
+eval/gold/
+eval/docs/
