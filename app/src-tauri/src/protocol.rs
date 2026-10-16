@@ -105,6 +105,11 @@ impl Pending {
         }
     }
 
+    /// True once the engine's output has ended (it exited or is exiting).
+    pub fn is_closed(&self) -> bool {
+        self.closed.lock().unwrap().is_some()
+    }
+
     pub fn len(&self) -> usize {
         self.waiters.lock().unwrap().len()
     }

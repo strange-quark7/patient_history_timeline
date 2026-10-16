@@ -99,8 +99,10 @@ impl EngineProcess {
         Ok(Self { child, stdin, pending })
     }
 
+    /// Its output can end a moment before the OS reports the exit, so a closed
+    /// output also counts as dead; otherwise the next call would hit the old one.
     fn is_alive(&mut self) -> bool {
-        matches!(self.child.try_wait(), Ok(None))
+        !self.pending.is_closed() && matches!(self.child.try_wait(), Ok(None))
     }
 
     fn kill(&mut self) {
