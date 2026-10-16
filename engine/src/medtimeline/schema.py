@@ -65,6 +65,11 @@ class Medication(Sourced):
     dose: Optional[str] = None
     frequency: Optional[str] = Field(None, description="As written, e.g. '1-0-1', 'BD', 'TDS'.")
     duration: Optional[str] = None
+    duration_source: Optional[str] = Field(
+        None,
+        description="Where the duration is written when it is not in source_text, copied exactly from the page, "
+                    "e.g. a bracket '5days' covering several drugs or a closing 'x 1mth'.",
+    )
     route: Optional[str] = None
     instructions: Optional[str] = None
 

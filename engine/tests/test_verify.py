@@ -127,3 +127,44 @@ def test_gate_removes_failed_items_and_history_lists_them():
     assert [c.drug for c in h.medication_courses] == ["metformin"]
     assert h.encounters[0].date == "2025-03-12"  # from the date as written
     assert {(r.section, r.field) for r in h.review_items} >= {("medications", "numbers"), ("encounter", "date_iso")}
+
+
+BRACKET_PAGE = """Rx
+Tab Pantoprazole 40mg OD
+Tab Domperidone 10mg
+1 --- x --- 1
+  } 5days
+"""
+
+
+def _bracket(**med_over):
+    meds = [
+        {"drug_as_written": "Pantoprazole", "strength": "40mg", "frequency": "OD", "duration": "5 days",
+         "duration_source": "5days", "confidence": 0.9, "source_text": "Tab Pantoprazole 40mg OD"},
+        {"drug_as_written": "Domperidone", "strength": "10mg", "frequency": "1-0-1", "duration": "5 days",
+         "duration_source": "5days", "confidence": 0.9, "source_text": "Tab Domperidone 10mg\n1 --- x --- 1"},
+    ]
+    meds[1].update(med_over)
+    return _x(transcription=BRACKET_PAGE, medications=meds, diagnoses=[], investigations=[], vitals=[],
+              episodes=[], negative_history=[], encounter={})
+
+
+def test_shared_duration_is_backed_by_its_own_quote():
+    issues, grounding = verify_page(_bracket(), None)
+    assert grounding == "transcription"
+    assert issues == []
+
+
+def test_unbacked_duration_drops_only_the_duration():
+    x = _bracket(duration="7 days", duration_source=None)
+    issues, _ = verify_page(x, None)
+    assert [(i.section, i.index, i.field, i.blocking) for i in issues] == [("medications", 1, "duration", False)]
+    kept = gate(x, issues)
+    assert [m.drug_as_written for m in kept.medications] == ["Pantoprazole", "Domperidone"]
+    assert kept.medications[1].duration is None
+    assert kept.medications[0].duration == "5 days"
+
+
+def test_duration_quote_must_be_on_the_page():
+    issues, _ = verify_page(_bracket(duration_source="7days"), None)
+    assert [(i.index, i.field) for i in issues] == [(1, "duration")]

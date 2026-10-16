@@ -21,6 +21,8 @@ Rules:
 - First write a verbatim transcription of the whole page, line by line, exactly as written.
 - Every item's source_text must be copied character for character from the page.
 - Transcribe only what is on the page. Never infer a diagnosis, drug or value that is not written.
+- A drug's source_text may span several lines when its dose or timing is written on the lines below its name.
+- When one duration covers several drugs (a bracket, or "x 1 month" after the list), copy that text into each drug's duration_source.
 - Keep abbreviations as written in source_text (e.g. "T. Pan 40 1-0-0 x 5d"), and expand them in the structured fields when the meaning is clear.
 - Dates are DD/MM/YYYY unless the page clearly shows otherwise. Set date_ambiguous when day and month could be swapped or the year is missing.
 - Set confidence honestly. Handwriting you are unsure of gets a low confidence; text you cannot read goes in illegible_notes, not into a guessed field.
