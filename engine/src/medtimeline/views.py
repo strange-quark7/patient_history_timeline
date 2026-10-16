@@ -104,7 +104,7 @@ def _symptom_rows(h: PatientHistory) -> list[Row]:
     dates = _dates(h)
     return [
         Row(kind="symptom", label=s.name, first_seen=s.first_seen, last_seen=s.last_seen,
-            visit_count=len(s.encounter_ids), episode_count=len(s.episodes), episodes=s.episodes,
+            visit_count=len(s.encounter_ids), episode_count=sum(e.count for e in s.episodes), episodes=s.episodes,
             events=[Event(date=dates[i], encounter_id=i) for i in s.encounter_ids])
         for s in h.symptoms
     ]

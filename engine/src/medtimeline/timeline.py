@@ -8,13 +8,14 @@ decided in the app, not here.
 from __future__ import annotations
 
 from collections import defaultdict
+from difflib import SequenceMatcher
 from datetime import date, timedelta
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from medtimeline import normalize
-from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Medication, Vital
+from medtimeline.schema import Diagnosis, ExtractionRecord, Investigation, Medication, ReportedEpisode, Vital
 
 REVIEW_THRESHOLD = 0.7
 
@@ -34,6 +35,8 @@ class EncounterNode(BaseModel):
     investigations: list[Investigation] = Field(default_factory=list)
     vitals: list[Vital] = Field(default_factory=list)
     advice: list[str] = Field(default_factory=list)
+    negative_history: list[str] = Field(default_factory=list)
+    reported_episodes: list[ReportedEpisode] = Field(default_factory=list)
     needs_review: int = 0
 
 
@@ -46,9 +49,33 @@ class MedicationCourse(BaseModel):
 
 
 class Episode(BaseModel):
+    """One episode on a lane: a reported event, or a visit where the item appeared."""
+
     start: Optional[str]
     end: Optional[str]
     encounter_ids: list[str]
+    id: Optional[str] = Field(None, description="EpisodeRecord id when this is a reported event.")
+    count: int = 1
+    is_worst: bool = False
+
+
+class EpisodeRecord(BaseModel):
+    """A patient-reported event, linked to the visit where it was recorded."""
+
+    id: str
+    symptom: str
+    date: Optional[str]
+    date_precision: str
+    when_raw: Optional[str]
+    count: int
+    description: Optional[str]
+    duration: Optional[str]
+    severity_note: Optional[str]
+    is_worst: bool
+    triggers: list[str]
+    reported_at: str = Field(description="Encounter id of the visit that recorded it.")
+    confidence: float
+    source_text: str
 
 
 class Condition(BaseModel):
@@ -86,6 +113,7 @@ class PatientHistory(BaseModel):
     medication_courses: list[MedicationCourse]
     conditions: list[Condition]
     symptoms: list[Symptom] = Field(default_factory=list)
+    episodes: list[EpisodeRecord] = Field(default_factory=list)
     lab_series: list[LabSeries]
     pages_needing_review: list[str]
 
@@ -139,6 +167,8 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
             node.investigations += x.investigations
             node.vitals += x.vitals
             node.advice += x.advice
+            node.negative_history += x.negative_history
+            node.reported_episodes += x.episodes
             node.clinician = node.clinician or x.encounter.clinician
             node.facility = node.facility or x.encounter.facility
             flagged = (
@@ -146,6 +176,7 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
                 + _review_count(x.medications)
                 + _review_count(x.investigations)
                 + _review_count(x.vitals)
+                + _review_count(x.episodes)
                 + len(x.illegible_notes)
             )
             node.needs_review += flagged
@@ -160,13 +191,15 @@ def build_history(records: list[ExtractionRecord]) -> PatientHistory:
         node.id = f"enc-{i}"
 
     distinct = sorted({n.lower() for n in names})
+    episodes = _episode_records(encounters)
     return PatientHistory(
         patient_name=names[0] if names else None,
         patient_conflicts=distinct if len(distinct) > 1 else [],
         encounters=encounters,
         medication_courses=_medication_courses(encounters),
         conditions=_conditions(encounters),
-        symptoms=_symptoms(encounters),
+        symptoms=_symptoms(encounters, episodes),
+        episodes=episodes,
         lab_series=_lab_series(encounters),
         pages_needing_review=review_pages,
     )
@@ -234,12 +267,67 @@ def _conditions(encounters: list[EncounterNode]) -> list[Condition]:
     return out
 
 
-def _symptoms(encounters: list[EncounterNode]) -> list[Symptom]:
+def _episode_records(encounters: list[EncounterNode]) -> list[EpisodeRecord]:
+    records = []
+    for enc in encounters:
+        for ep in enc.reported_episodes:
+            records.append(EpisodeRecord(
+                id="",
+                symptom=ep.symptom,
+                date=ep.date_iso,
+                date_precision=ep.date_precision if ep.date_iso else "unknown",
+                when_raw=ep.when_raw,
+                count=max(1, ep.count),
+                description=ep.description,
+                duration=ep.duration,
+                severity_note=ep.severity_note,
+                is_worst=ep.is_worst,
+                triggers=ep.triggers,
+                reported_at=enc.id,
+                confidence=ep.confidence,
+                source_text=ep.source_text,
+            ))
+    # Undated reports sit at the visit that recorded them.
+    dates = {e.id: e.date for e in encounters}
+    records.sort(key=lambda r: (r.date or dates[r.reported_at] or "9999", r.reported_at))
+    for i, r in enumerate(records, start=1):
+        r.id = f"ep-{i}"
+    return records
+
+
+def _same_symptom(a: str, b: str) -> bool:
+    a, b = _key(a), _key(b)
+    return a == b or (len(a) > 3 and a in b) or (len(b) > 3 and b in a) or SequenceMatcher(None, a, b).ratio() >= 0.8
+
+
+def _symptoms(encounters: list[EncounterNode], records: list[EpisodeRecord]) -> list[Symptom]:
+    """Reported events are the episodes when a symptom has any; otherwise each visit is one."""
+    dates = {e.id: e.date for e in encounters}
+    names = {_key(n): n for n, _ in _mentions(encounters, lambda e: e.complaints).values()}
+    for r in records:
+        if not any(_same_symptom(r.symptom, n) for n in names.values()):
+            names[_key(r.symptom)] = r.symptom
     out = []
-    for name, mentions in _mentions(encounters, lambda e: e.complaints).values():
-        first, last = _span(mentions)
-        out.append(Symptom(name=name, first_seen=first, last_seen=last,
-                           encounter_ids=[i for _, i in mentions], episodes=episodes_from(mentions)))
+    mentions_by_key = _mentions(encounters, lambda e: e.complaints)
+    for key, name in names.items():
+        mentions = mentions_by_key.get(key, (name, []))[1]
+        reported = [r for r in records if _same_symptom(r.symptom, name)]
+        enc_ids = list(dict.fromkeys([i for _, i in mentions] + [r.reported_at for r in reported]))
+        if reported:
+            episodes = [
+                Episode(start=r.date, end=r.date, encounter_ids=[r.reported_at], id=r.id, count=r.count, is_worst=r.is_worst)
+                for r in reported
+            ]
+        else:
+            episodes = episodes_from(mentions)
+        all_dates = sorted([d for d, _ in mentions if d] + [r.date or dates[r.reported_at] for r in reported if r.date or dates[r.reported_at]])
+        out.append(Symptom(
+            name=name,
+            first_seen=all_dates[0] if all_dates else None,
+            last_seen=all_dates[-1] if all_dates else None,
+            encounter_ids=enc_ids,
+            episodes=episodes,
+        ))
     return out
 
 

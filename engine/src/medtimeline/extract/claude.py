@@ -22,6 +22,8 @@ Rules:
 - Keep abbreviations as written in source_text (e.g. "T. Pan 40 1-0-0 x 5d"), and expand them in the structured fields when the meaning is clear.
 - Dates are DD/MM/YYYY unless the page clearly shows otherwise. Set date_ambiguous when day and month could be swapped or the year is missing.
 - Set confidence honestly. Handwriting you are unsure of gets a low confidence; text you cannot read goes in illegible_notes, not into a guessed field.
+- Record each event the history describes (e.g. each seizure, each chest-pain attack) in episodes, separate from the visit. Use count when the page only gives a number ("3 episodes since last visit"). Mark is_worst only when the page says so.
+- Record pertinent negatives ("no fever", "denies head injury") in negative_history.
 - If the page has an embedded text layer, prefer it for typed text, but trust the image for handwriting and layout."""
 
 

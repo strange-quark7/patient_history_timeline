@@ -18,6 +18,7 @@ engine/   Python engine: ingest -> extract -> normalize -> assemble history
     extract/         swappable extractors (claude = cloud; fixture = offline stand-in)
     normalize.py     DD/MM dates, 1-0-1 / BD frequencies, durations, drug keys
     timeline.py      encounters, medication courses, conditions, symptoms, episodes, lab series
+    details.py       what the detail panel shows for one selected episode or visit
     views.py         lenses (visits, symptoms, medications, both, conditions, labs) and sort orders
     evaluate.py      field-level scoring against hand-labelled gold pages
 app/      desktop app (Tauri + React), not started
@@ -47,8 +48,10 @@ Lenses: `visits`, `symptoms`, `medications`, `symptoms_medications`, `conditions
 Sorts: `chronological`, `recent`, `episodes`, `visits`, `duration`, `name`.
 Filters: `--query <text>`, `--from YYYY-MM-DD`, `--to YYYY-MM-DD`.
 
-Each doctor visit where a symptom, condition or drug appears counts as one
-episode of it. In `symptoms_medications`, each row
+Episodes the patient reports (e.g. "13 seizures, the worst in Dec 2024") are
+their own records, linked to the visit that recorded them, with a count when the
+page only gives a number. A symptom with no reported episodes falls back to one
+episode per visit where it appears. In `symptoms_medications`, each row
 lists the items of the other kind seen at the same visits.
 
 ## Scoring an extractor
@@ -60,6 +63,13 @@ Both folders are git-ignored so patient data never lands in the repo.
 ```bash
 medtimeline eval eval/docs eval/gold --extractor claude
 ```
+
+## Detail for a selected element
+
+`details.episode_detail(history, episode_id)` returns the episode with the visit
+that recorded it, the negative history, the medication in force when it happened,
+and the labs, imaging and other tests from that visit. `details.visit_detail`
+does the same for a visit.
 
 A local extractor replaces the cloud one only once its scores are close enough.
 

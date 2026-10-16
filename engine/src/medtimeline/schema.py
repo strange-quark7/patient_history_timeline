@@ -70,6 +70,7 @@ class Medication(Sourced):
 
 class Investigation(Sourced):
     name: str
+    kind: str = Field("lab", description="'lab', 'imaging' (X-ray, CT, MRI, ultrasound) or 'study' (EEG, ECG, ...).")
     status: str = Field(description="'ordered' or 'resulted'.")
     value: Optional[str] = None
     unit: Optional[str] = None
@@ -82,6 +83,21 @@ class Vital(Sourced):
     unit: Optional[str] = None
 
 
+class ReportedEpisode(Sourced):
+    """One event the history describes, e.g. a seizure that happened between visits."""
+
+    symptom: str = Field(description="What happened, e.g. 'seizure', 'chest pain'.")
+    when_raw: Optional[str] = Field(None, description="As written, e.g. 'last night', 'Dec 2024', 'since last visit'.")
+    date_iso: Optional[str] = Field(None, description="Best date as YYYY-MM-DD; first of the month/year if only that is known.")
+    date_precision: str = Field("unknown", description="'day', 'month', 'year' or 'unknown'.")
+    count: int = Field(1, description="Episodes this entry covers, e.g. 3 for 'three episodes since last visit'.")
+    description: Optional[str] = None
+    duration: Optional[str] = None
+    severity_note: Optional[str] = Field(None, description="Severity as described, e.g. 'worst so far'.")
+    is_worst: bool = Field(False, description="True only if the page says this was the worst or most severe one.")
+    triggers: list[str] = Field(default_factory=list)
+
+
 class PageExtraction(BaseModel):
     doc_type: DocType
     script: Script
@@ -89,6 +105,14 @@ class PageExtraction(BaseModel):
     patient: Patient
     complaints: list[str] = Field(default_factory=list)
     history: Optional[str] = None
+    episodes: list[ReportedEpisode] = Field(
+        default_factory=list,
+        description="Individual events the history describes (dated or counted), separate from the visit itself.",
+    )
+    negative_history: list[str] = Field(
+        default_factory=list,
+        description="Things the page says were absent or denied, e.g. 'no fever', 'no head injury'.",
+    )
     examination: Optional[str] = None
     diagnoses: list[Diagnosis] = Field(default_factory=list)
     medications: list[Medication] = Field(default_factory=list)
