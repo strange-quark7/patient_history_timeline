@@ -1,0 +1,20 @@
+[package]
+name = "patient-history-timeline"
+version = "0.1.0"
+description = "Patient History Timeline desktop shell"
+edition = "2021"
+publish = false
+
+[lib]
+# The `_lib` suffix avoids a name clash with the binary on Windows.
+name = "patient_history_timeline_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.4", features = [] }
+tauri-plugin-dialog = "2.8.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
