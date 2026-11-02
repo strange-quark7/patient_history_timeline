@@ -1,4 +1,4 @@
-# patient_history_timeline
+# Chronos: patient_history_timeline
 
 Patient History Collation and Visualisation Tool.
 
